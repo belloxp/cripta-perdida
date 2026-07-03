@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script src="Util.js" defer></script>
+    <script src="Cutscenes.js" defer></script>
+    <script src="Fases.js" defer></script>
+    <script src="cripta.js" defer></script>
+    <title>A Cripta Perdida</title>
+</head>
+<body>
+    <canvas id="des" width="900" height="600"></canvas>
+
+    <script>
+        window.addEventListener('error', (ev) => {
+            try {
+                const c = document.getElementById('des')
+                const ctx = c.getContext('2d')
+                ctx.fillStyle = '#1a0d0d'
+                ctx.fillRect(0, 0, c.width, c.height)
+                ctx.fillStyle = '#ff6b6b'
+                ctx.font = '20px monospace'
+                ctx.fillText('ERRO NO JOGO:', 20, 40)
+                ctx.font = '14px monospace'
+                ctx.fillText(String(ev.message).slice(0, 100), 20, 70)
+                ctx.fillText((ev.filename || '').split('/').pop() + ' : linha ' + ev.lineno, 20, 95)
+            } catch (e) {  }
+        })
+    </script>
+</body>
+</html>
