@@ -4,7 +4,7 @@
 //  Obj com des_obj() e colid() AABB, subclasses com mov())
 // ============================================================
 
-let des = null // contexto 2D — atribuído em cripta.js
+let des = null 
 
 // ---------- cache de imagens ----------
 const _imgs = {}
@@ -18,9 +18,6 @@ function pegaImg(src) {
     return _imgs[src]
 }
 
-// ---------- sons gerais (arquivos ainda a definir) ----------
-// Quando os arquivos existirem, é só plugar aqui. Ex:
-// SONS.tiro = new Audio('assets/audio/tiro.wav')
 const SONS = {
     tiro: null,
     dano: null,
@@ -83,7 +80,6 @@ class Texto {
 }
 
 class BarraProgresso {
-    // frac entre 0 e 1
     des(x, y, w, h, frac, corFundo, corFrente, rotulo) {
         des.fillStyle = corFundo
         des.fillRect(x, y, w, h)
