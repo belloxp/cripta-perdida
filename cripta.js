@@ -7,9 +7,7 @@ des = document.getElementById('des').getContext('2d')
 const LARG = 900
 const ALT = 600
 
-// ---------- entrada ----------
-// Os dois jogadores gravam suas teclas no mesmo mapa `teclas`.
-// P1: A/D/W/S move + F atira  |  P2: setas + L atira
+
 const teclas = {}
 document.addEventListener('keydown', (ev) => {
     let k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key
@@ -22,21 +20,15 @@ document.addEventListener('keyup', (ev) => {
     teclas[k] = false
 })
 
-// roteamento de teclas apertadas (não contínuas)
-// stub — o fluxo de cut-scenes/fases entra nas próximas sprints
 function aoApertar(k) {
     if (estado === 'HOME' && k === 'Enter') {
         // TODO: iniciar o fluxo do jogo (cut-scene de intro)
     }
 }
 
-// ============================================================
-//  ESTADO + LOOP PRINCIPAL
-// ============================================================
 let estado = 'HOME' // HOME | CUTSCENE | FASE | GAMEOVER | FINAL
 let piscaTimer = 0
 
-// tela inicial (placeholder — arte definitiva entra depois)
 function desHome() {
     des.fillStyle = '#0b0805'
     des.fillRect(0, 0, LARG, ALT)
