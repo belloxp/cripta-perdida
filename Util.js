@@ -84,6 +84,11 @@ class Player extends Obj {
         this.forca = 1
         this.tiroTimer = 0
         this.cooldown = 0
+        this.maxVida = 10
+        this.vida = 10
+        this.pts = 0
+        this.invul = 0
+        this.vivo = true
     }
 
     spriteAtual() {
@@ -94,10 +99,13 @@ class Player extends Obj {
     }
 
     des_obj() {
+        if (!this.vivo) return
+        if (this.invul > 0 && Math.floor(this.invul / 4) % 2 === 0) return
         des.drawImage(pegaImg(this.spriteAtual()), this.x, this.y, this.w, this.h)
     }
 
     mov(area, paredes) {
+        if (!this.vivo) return
         this.dirX = 0
         this.dirY = 0
         if (teclas[this.teclas.esq]) { this.dirX = -this.vel; this.facing = 'esq' }
@@ -139,10 +147,27 @@ class Player extends Obj {
     atualizaTimers() {
         if (this.cooldown > 0) this.cooldown -= 1
         if (this.tiroTimer > 0) this.tiroTimer -= 1
+        if (this.invul > 0) this.invul -= 1
+    }
+
+    levaDano(n) {
+        if (!this.vivo || this.invul > 0) return
+        this.vida -= n
+        this.invul = 60
+        tocaSom(SONS.dano)
+        if (this.vida <= 0) {
+            this.vida = 0
+            this.vivo = false
+        }
+    }
+
+    cura(n) {
+        if (!this.vivo) return
+        this.vida = Math.min(this.maxVida, this.vida + n)
     }
 
     atira(grupo, modo) {
-        if (this.cooldown > 0) return
+        if (!this.vivo || this.cooldown > 0) return
         this.cooldown = 18
         this.tiroTimer = 14
         if (modo === 'cima') {
