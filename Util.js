@@ -81,12 +81,16 @@ class Player extends Obj {
         this.dirX = 0
         this.dirY = 0
         this.vel = 4
+        this.forca = 1
+        this.tiroTimer = 0
+        this.cooldown = 0
     }
 
     spriteAtual() {
         let lado = this.facing === 'esq' ? 'esq' : 'dir'
+        let acao = this.tiroTimer > 0 ? 'tiro' + lado : lado
         let n = this.frame === 0 ? '001' : '002'
-        return this.prefixo + lado + '_' + n + '.png'
+        return this.prefixo + acao + '_' + n + '.png'
     }
 
     des_obj() {
@@ -130,6 +134,53 @@ class Player extends Obj {
             if (this.colid(paredes[i])) return true
         }
         return false
+    }
+
+    atualizaTimers() {
+        if (this.cooldown > 0) this.cooldown -= 1
+        if (this.tiroTimer > 0) this.tiroTimer -= 1
+    }
+
+    atira(grupo, modo) {
+        if (this.cooldown > 0) return
+        this.cooldown = 18
+        this.tiroTimer = 14
+        if (modo === 'cima') {
+            grupo.push(new Tiro(this.x + this.w / 2 - 4, this.y - 6, 8, 16, '#ffd84d', 0, -10, this.forca, this))
+        } else {
+            let dx = this.facing === 'esq' ? -10 : 10
+            let tx = this.facing === 'esq' ? this.x - 14 : this.x + this.w - 2
+            grupo.push(new Tiro(tx, this.y + this.h / 2 - 4, 16, 8, '#ffd84d', dx, 0, this.forca, this))
+        }
+        tocaSom(SONS.tiro)
+    }
+}
+
+// ============================================================
+//  TIRO DOS JOGADORES
+// ============================================================
+class Tiro extends Obj {
+    constructor(x, y, w, h, cor, dx, dy, dano, dono) {
+        super(x, y, w, h, null)
+        this.cor = cor
+        this.dx = dx
+        this.dy = dy
+        this.dano = dano
+        this.dono = dono
+    }
+
+    des_tiro() {
+        des.fillStyle = this.cor
+        des.fillRect(this.x, this.y, this.w, this.h)
+    }
+
+    mov() {
+        this.x += this.dx
+        this.y += this.dy
+    }
+
+    foraDaTela() {
+        return this.y < -30 || this.y > 700 || this.x < -30 || this.x > 950
     }
 }
 
