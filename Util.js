@@ -78,6 +78,9 @@ class Player extends Obj {
         this.facing = 'dir'
         this.frame = 0
         this.frameTimer = 0
+        this.dirX = 0
+        this.dirY = 0
+        this.vel = 4
     }
 
     spriteAtual() {
@@ -88,6 +91,45 @@ class Player extends Obj {
 
     des_obj() {
         des.drawImage(pegaImg(this.spriteAtual()), this.x, this.y, this.w, this.h)
+    }
+
+    mov(area, paredes) {
+        this.dirX = 0
+        this.dirY = 0
+        if (teclas[this.teclas.esq]) { this.dirX = -this.vel; this.facing = 'esq' }
+        if (teclas[this.teclas.dir]) { this.dirX = this.vel; this.facing = 'dir' }
+        if (area.vert) {
+            if (teclas[this.teclas.cima]) this.dirY = -this.vel
+            if (teclas[this.teclas.baixo]) this.dirY = this.vel
+        }
+
+        this.x += this.dirX
+        if (paredes && this.bateParede(paredes)) this.x -= this.dirX
+        if (this.x < area.x) this.x = area.x
+        if (this.x + this.w > area.x + area.w) this.x = area.x + area.w - this.w
+
+        this.y += this.dirY
+        if (paredes && this.bateParede(paredes)) this.y -= this.dirY
+        if (this.y < area.y) this.y = area.y
+        if (this.y + this.h > area.y + area.h) this.y = area.y + area.h - this.h
+
+        if (this.dirX !== 0 || this.dirY !== 0) {
+            this.frameTimer += 1
+            if (this.frameTimer >= 10) {
+                this.frameTimer = 0
+                this.frame = this.frame === 0 ? 1 : 0
+            }
+        } else {
+            this.frame = 0
+            this.frameTimer = 0
+        }
+    }
+
+    bateParede(paredes) {
+        for (let i = 0; i < paredes.length; i++) {
+            if (this.colid(paredes[i])) return true
+        }
+        return false
     }
 }
 
