@@ -7,6 +7,10 @@ des = document.getElementById('des').getContext('2d')
 const LARG = 900
 const ALT = 600
 
+let p1 = new Player(280, 470, 46, 64, 'assets/player1', 'assets/selecaoPlayer1.png',
+    { esq: 'a', dir: 'd', cima: 'w', baixo: 's', tiro: 'f' })
+let p2 = new Player(580, 470, 46, 64, 'assets/player2', 'assets/selecaoPlayer2.png',
+    { esq: 'ArrowLeft', dir: 'ArrowRight', cima: 'ArrowUp', baixo: 'ArrowDown', tiro: 'l' })
 
 const teclas = {}
 document.addEventListener('keydown', (ev) => {

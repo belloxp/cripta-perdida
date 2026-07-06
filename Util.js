@@ -67,6 +67,31 @@ class Obj {
 }
 
 // ============================================================
+//  PLAYER
+// ============================================================
+class Player extends Obj {
+    constructor(x, y, w, h, prefixo, rosto, mapaTeclas) {
+        super(x, y, w, h, null)
+        this.prefixo = prefixo
+        this.rosto = rosto
+        this.teclas = mapaTeclas
+        this.facing = 'dir'
+        this.frame = 0
+        this.frameTimer = 0
+    }
+
+    spriteAtual() {
+        let lado = this.facing === 'esq' ? 'esq' : 'dir'
+        let n = this.frame === 0 ? '001' : '002'
+        return this.prefixo + lado + '_' + n + '.png'
+    }
+
+    des_obj() {
+        des.drawImage(pegaImg(this.spriteAtual()), this.x, this.y, this.w, this.h)
+    }
+}
+
+// ============================================================
 //  TEXTO E BARRA DE PROGRESSO
 // ============================================================
 class Texto {
