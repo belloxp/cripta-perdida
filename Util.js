@@ -240,6 +240,30 @@ class BarraProgresso {
     }
 }
 
+// ---------- efeitos de texto flutuante ----------
+let efeitos = []
+function efeitoTexto(txt, x, y, cor) {
+    efeitos.push({ txt: txt, x: x, y: y, t: 60, cor: cor || '#ffe9b0' })
+}
+function atualizaEfeitos() {
+    efeitos.forEach((e) => {
+        e.y -= 0.8
+        e.t -= 1
+    })
+    efeitos = efeitos.filter((e) => e.t > 0)
+}
+function desEfeitos() {
+    efeitos.forEach((e) => {
+        des.globalAlpha = Math.min(1, e.t / 30)
+        des.fillStyle = e.cor
+        des.font = 'bold 16px monospace'
+        des.textAlign = 'center'
+        des.fillText(e.txt, e.x, e.y)
+        des.textAlign = 'left'
+        des.globalAlpha = 1
+    })
+}
+
 // ---------- quebra de texto (cut-scenes) ----------
 function quebraTexto(texto, maxLarg, font) {
     des.font = font
