@@ -40,3 +40,13 @@ function atualizaColetaveis(grupo) {
         }
     }
 }
+
+let fase6 = fabricaFaseTiro({
+    nome: 'PRAGA VIII — Invasão de Gafanhotos',
+    fundo: 6,
+    meta: 25,
+    spawns: [
+        { sprites: ['assets/gafanhotos1.png', 'assets/gafanhotos2.png', 'assets/gafanhotos3.png'], w: 40, h: 32, vel: [3, 5.5], intervalo: 38, sway: 1.2 },
+        { sprites: ['assets/gafanhotos1.png', 'assets/gafanhotos2.png', 'assets/gafanhotos3.png'], w: 52, h: 42, vel: [2.2, 3.5], intervalo: 95, sway: 0.6, hp: 2 }
+    ]
+})
