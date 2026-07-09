@@ -150,6 +150,17 @@ class Poca extends Obj {
     }
 }
 
+class Granizo extends Obj {
+    constructor(x, y, w, h, at, vel) {
+        super(x, y, w, h, at)
+        this.vel = vel
+    }
+
+    mov() {
+        this.y += this.vel
+    }
+}
+
 // ---------- cache de imagens ----------
 const _imgs = {}
 function pegaImg(src) {
