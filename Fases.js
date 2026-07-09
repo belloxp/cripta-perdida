@@ -238,6 +238,111 @@ let fase2 = fabricaFaseTiro({
     ]
 })
 
+let fase3 = {
+    nome: 'PRAGA V — Peste no Gado',
+    INGREDIENTES: [
+        { nome: 'Ervas Sagradas', cor: '#4f9e3a' },
+        { nome: 'Água do Nilo', cor: '#3a7ddb' },
+        { nome: 'Sal do Deserto', cor: '#e8e2cf' }
+    ],
+    receita: [1, 2, 0],
+    dica: '"Primeiro o rio que dá vida, depois o sal que preserva, por fim a erva que cura."',
+    init() {
+        this.completa = false
+        this.passo = 0
+        this.feedback = ''
+        this.feedbackTimer = 0
+        this.fimTimer = 0
+        this.borbulha = 0
+        p1.x = 250; p1.y = 400; p1.facing = 'dir'
+        p2.x = 610; p2.y = 400; p2.facing = 'esq'
+    },
+    ingrediente(idx) {
+        if (this.completa || this.passo >= this.receita.length) return
+        if (idx === this.receita[this.passo]) {
+            this.passo += 1
+            this.feedback = this.INGREDIENTES[idx].nome + ' adicionado!'
+            this.feedbackTimer = 90
+            this.borbulha = 40
+            tocaSom(SONS.item)
+        } else {
+            this.passo = 0
+            this.feedback = 'Ingrediente errado! O caldeirão ferveu em fúria!'
+            this.feedbackTimer = 90
+            players.forEach((pl) => { pl.levaDano(1) })
+            tocaSom(SONS.erro)
+        }
+    },
+    atual() {
+        players.forEach((pl) => { pl.atualizaTimers() })
+        if (this.feedbackTimer > 0) this.feedbackTimer -= 1
+        if (this.borbulha > 0) this.borbulha -= 1
+        if (this.passo >= this.receita.length) {
+            this.fimTimer += 1
+            if (this.fimTimer > 100) this.completa = true
+        }
+    },
+    des() {
+        desFundo(3)
+
+        des.fillStyle = this.passo >= this.receita.length ? '#caa86a' : '#6b5a44'
+        for (let i = 0; i < 4; i++) {
+            let gx = 80 + i * 210
+            des.fillRect(gx, 180, 90, 46)
+            des.fillRect(gx + 70, 162, 30, 28)
+            des.fillRect(gx + 8, 226, 10, 22)
+            des.fillRect(gx + 70, 226, 10, 22)
+        }
+
+        let cx = LARG / 2 - 70, cy = 330
+        des.fillStyle = '#222'
+        des.beginPath()
+        des.ellipse(cx + 70, cy + 70, 90, 60, 0, 0, Math.PI * 2)
+        des.fill()
+        des.fillStyle = this.passo > 0 ? '#7dd34a' : '#5d4a8a'
+        des.beginPath()
+        des.ellipse(cx + 70, cy + 30, 74, 22, 0, 0, Math.PI * 2)
+        des.fill()
+        if (this.borbulha > 0) {
+            des.fillStyle = 'rgba(255,255,255,0.5)'
+            for (let i = 0; i < 5; i++) {
+                des.beginPath()
+                des.arc(cx + 30 + i * 22, cy + 20 - (40 - this.borbulha), 5, 0, Math.PI * 2)
+                des.fill()
+            }
+        }
+
+        players.forEach((pl) => { pl.des_obj() })
+
+        let t = new Texto()
+        t.des_text('Preparem o antídoto na ordem correta:', LARG / 2, 92, '#f3e9d2', 'bold 17px monospace', 'center')
+        t.des_text(this.dica, LARG / 2, 118, '#c4943a', 'italic 15px monospace', 'center')
+
+        this.INGREDIENTES.forEach((ing, i) => {
+            let bx = LARG / 2 - 330 + i * 230
+            des.fillStyle = ing.cor
+            des.fillRect(bx, 140, 200, 52)
+            des.fillStyle = '#000'
+            des.font = 'bold 14px monospace'
+            des.textAlign = 'center'
+            des.fillText(ing.nome, bx + 100, 162)
+            des.font = '12px monospace'
+            des.fillText('P1: [' + (i + 1) + ']   P2: [' + ['8', '9', '0'][i] + ']', bx + 100, 182)
+            des.textAlign = 'left'
+        })
+
+        let barra = new BarraProgresso()
+        barra.des(LARG / 2 - 120, 215, 240, 22, this.passo / this.receita.length, '#2a2118', '#7dd34a', 'Fórmula: ' + this.passo + '/' + this.receita.length)
+
+        if (this.feedbackTimer > 0) {
+            t.des_text(this.feedback, LARG / 2, 268, this.feedback.indexOf('errado') >= 0 ? '#ff5050' : '#7dd34a', 'bold 16px monospace', 'center')
+        }
+        if (this.passo >= this.receita.length) {
+            t.des_text('O GADO FOI SALVO!', LARG / 2, 300, '#ffd84d', 'bold 24px monospace', 'center')
+        }
+    }
+}
+
 let fase6 = fabricaFaseTiro({
     nome: 'PRAGA VIII — Invasão de Gafanhotos',
     fundo: 6,
