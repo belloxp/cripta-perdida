@@ -58,6 +58,56 @@ class Parede extends Obj {
 
 let des = null 
 
+class Harpa extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, 'assets/harpa_001.png')
+        this.tocando = 0
+        this.frame = 0
+        this.frameTimer = 0
+    }
+
+    atual() {
+        if (this.tocando > 0) {
+            this.tocando -= 1
+            this.frameTimer += 1
+            if (this.frameTimer >= 6) {
+                this.frameTimer = 0
+                this.frame = this.frame === 0 ? 1 : 0
+            }
+        } else {
+            this.frame = 0
+        }
+    }
+
+    des_obj() {
+        des.drawImage(pegaImg('assets/harpa_' + (this.frame === 0 ? '001' : '002') + '.png'), this.x, this.y, this.w, this.h)
+    }
+}
+
+class NotaMusical extends Obj {
+    constructor(x, y) {
+        let n = Math.floor(Math.random() * 3) + 1
+        super(x, y, 26, 26, 'assets/nota' + n + '.png')
+        this.alpha = 1
+        this.dx = (Math.random() - 0.5) * 1.4
+    }
+
+    mov() {
+        this.y -= 1.4
+        this.x += this.dx
+        this.alpha -= 0.012
+    }
+
+    des_obj() {
+        let img = pegaImg(this.at)
+        if (!img.complete || img.naturalWidth === 0) return
+        des.globalAlpha = Math.max(0, this.alpha)
+        des.drawImage(img, this.x, this.y, this.w, this.h)
+        des.globalAlpha = 1
+    }
+}
+
+
 // ---------- cache de imagens ----------
 const _imgs = {}
 function pegaImg(src) {
