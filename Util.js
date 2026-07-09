@@ -107,6 +107,48 @@ class NotaMusical extends Obj {
     }
 }
 
+class Vaso extends Obj {
+    constructor(x, y, w, h, at) {
+        super(x, y, w, h, at)
+        this.temColetavel = false
+        this.quebrado = false
+    }
+}
+
+class Fonte extends Obj {
+    constructor(x, y) {
+        super(x, y, 54, 54, 'assets/fonte.png')
+        this.hp = 6
+    }
+
+    des_obj() {
+        des.drawImage(pegaImg(this.at), this.x, this.y, this.w, this.h)
+        des.fillStyle = '#222'
+        des.fillRect(this.x, this.y - 10, this.w, 6)
+        des.fillStyle = '#9dff3a'
+        des.fillRect(this.x, this.y - 10, this.w * (this.hp / 6), 6)
+    }
+}
+
+class Poca extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, null)
+        this.t = Math.random() * 6
+    }
+
+    des_obj() {
+        this.t += 0.06
+        let alpha = 0.55 + Math.sin(this.t) * 0.15
+        des.fillStyle = 'rgba(150, 190, 40,' + alpha + ')'
+        des.beginPath()
+        des.ellipse(this.x + this.w / 2, this.y + this.h / 2, this.w / 2, this.h / 2, 0, 0, Math.PI * 2)
+        des.fill()
+        des.fillStyle = 'rgba(220, 240, 120, 0.35)'
+        des.beginPath()
+        des.ellipse(this.x + this.w / 2 - 6, this.y + this.h / 2 - 3, this.w / 5, this.h / 5, 0, 0, Math.PI * 2)
+        des.fill()
+    }
+}
 
 // ---------- cache de imagens ----------
 const _imgs = {}
