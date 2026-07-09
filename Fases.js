@@ -477,6 +477,86 @@ let fase4 = {
     }
 }
 
+let fase5 = {
+    nome: 'PRAGA VII — Chuva de Granizo',
+    init() {
+        this.completa = false
+        this.grupoGranizos = []
+        this.time1 = 0
+        this.barra = 0
+        this.zona = { x: LARG / 2 - 80, y: 90, w: 160, h: 110 }
+        p1.x = 240; p1.y = ALT - 120; p1.facing = 'dir'
+        p2.x = 620; p2.y = ALT - 120; p2.facing = 'esq'
+    },
+    atual() {
+        let area = { x: 10, y: 70, w: LARG - 20, h: ALT - 82, vert: true }
+        players.forEach((pl) => {
+            pl.atualizaTimers()
+            pl.mov(area)
+            if (pl.vivo && teclas[' '] &&
+                pl.x + pl.w > this.zona.x && pl.x < this.zona.x + this.zona.w &&
+                pl.y + pl.h > this.zona.y && pl.y < this.zona.y + this.zona.h) {
+                this.barra += 0.28
+            }
+        })
+
+        this.time1 += 1
+        if (this.time1 >= 16) {
+            this.time1 = 0
+            let n = Math.floor(Math.random() * 3) + 1
+            let tam = 26 + Math.random() * 30
+            let posX = Math.random() * (LARG - tam - 10) + 5
+            let vel = Math.random() * (8 - 4.5) + 4.5
+            this.grupoGranizos.push(new Granizo(posX, -tam - 10, tam, tam, 'assets/granizo' + n + '.png', vel))
+        }
+
+        for (let i = this.grupoGranizos.length - 1; i >= 0; i--) {
+            let g = this.grupoGranizos[i]
+            g.mov()
+            if (g.y > ALT + 40) { this.grupoGranizos.splice(i, 1); continue }
+            for (let j = 0; j < players.length; j++) {
+                let pl = players[j]
+                if (pl.vivo && pl.colid(g)) {
+                    pl.levaDano(1)
+                    this.grupoGranizos.splice(i, 1)
+                    break
+                }
+            }
+        }
+
+        if (this.barra >= 100) {
+            this.barra = 100
+            this.completa = true
+            tocaSom(SONS.porta)
+        }
+    },
+    des() {
+        desFundo(5)
+
+        let abertura = (this.barra / 100) * 70
+        des.fillStyle = '#54452a'
+        des.fillRect(this.zona.x + 20, this.zona.y - 70 + abertura, this.zona.w - 40, 70 - abertura)
+        des.strokeStyle = '#ffd84d'
+        des.lineWidth = 2
+        des.setLineDash([8, 6])
+        des.strokeRect(this.zona.x, this.zona.y, this.zona.w, this.zona.h)
+        des.setLineDash([])
+        des.fillStyle = 'rgba(255, 216, 77, 0.12)'
+        des.fillRect(this.zona.x, this.zona.y, this.zona.w, this.zona.h)
+        des.fillStyle = '#ffd84d'
+        des.font = 'bold 13px monospace'
+        des.textAlign = 'center'
+        des.fillText('SEGURE [ESPAÇO]', this.zona.x + this.zona.w / 2, this.zona.y + this.zona.h / 2)
+        des.textAlign = 'left'
+
+        this.grupoGranizos.forEach((g) => { g.des_obj() })
+        players.forEach((pl) => { pl.des_obj() })
+
+        let barra = new BarraProgresso()
+        barra.des(LARG / 2 - 150, 70, 300, 20, this.barra / 100, '#2a2118', '#c4943a', 'PORTÃO: ' + Math.floor(this.barra) + '%')
+    }
+}
+
 let fase6 = fabricaFaseTiro({
     nome: 'PRAGA VIII — Invasão de Gafanhotos',
     fundo: 6,
