@@ -128,6 +128,106 @@ function fabricaFaseTiro(cfg) {
     }
 }
 
+const NOTAS = [
+    { id: 'c',      nome: 'Dó',     audio: novoAudio('./audios/nota1.wav') },
+    { id: 'rbemol', nome: 'Ré♭', audio: novoAudio('./audios/nota2.wav') },
+    { id: 'e',      nome: 'Mi',          audio: novoAudio('./audios/nota3.wav') },
+    { id: 'f',      nome: 'Fá',     audio: novoAudio('./audios/nota4.wav') },
+    { id: 'g',      nome: 'Sol',         audio: novoAudio('./audios/nota5.wav') },
+    { id: 'lbemol', nome: 'Lá♭', audio: novoAudio('./audios/nota6.wav') },
+    { id: 'b',      nome: 'Si',          audio: novoAudio('./audios/nota7.wav') }
+]
+const TECLAS_NOTAS_P1 = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6 }
+const TECLAS_NOTAS_P2 = { 'q': 0, 'w': 1, 'e': 2, 'r': 3, 't': 4, 'y': 5, 'u': 6 }
+
+let fase1 = {
+    nome: 'PRAGA I — Água em Sangue',
+    init() {
+        this.completa = false
+        this.prog = [0, 0]
+        this.erro = [0, 0]
+        this.notasVisuais = []
+        this.harpas = [new Harpa(150, 300, 150, 170), new Harpa(600, 300, 150, 170)]
+        this.fimTimer = 0
+        p1.x = 90;  p1.y = 360; p1.facing = 'dir'
+        p2.x = 770; p2.y = 360; p2.facing = 'esq'
+    },
+    nota(jogador, idx) {
+        if (this.completa || this.prog[jogador] >= NOTAS.length) return
+        let pl = players[jogador]
+        if (!pl.vivo) return
+        let harpa = this.harpas[jogador]
+        harpa.tocando = 25
+        tocaSom(NOTAS[idx].audio)
+        this.notasVisuais.push(new NotaMusical(harpa.x + Math.random() * harpa.w, harpa.y))
+        if (idx === this.prog[jogador]) {
+            this.prog[jogador] += 1
+            if (this.prog[jogador] >= NOTAS.length) {
+                efeitoTexto('PURIFICADO!', harpa.x + harpa.w / 2, harpa.y - 20, '#5db8ff')
+            }
+        } else {
+            this.prog[jogador] = 0
+            this.erro[jogador] = 30
+            tocaSom(SONS.erro)
+        }
+    },
+    atual() {
+        this.harpas.forEach((h) => { h.atual() })
+        this.notasVisuais.forEach((n) => { n.mov() })
+        this.notasVisuais = this.notasVisuais.filter((n) => n.alpha > 0)
+        this.erro = this.erro.map((e) => Math.max(0, e - 1))
+        players.forEach((pl) => { pl.atualizaTimers() })
+        if (this.prog[0] >= NOTAS.length && this.prog[1] >= NOTAS.length) {
+            this.fimTimer += 1
+            if (this.fimTimer > 90) this.completa = true
+        }
+    },
+    des() {
+        desFundo(1)
+
+        let pureza = (this.prog[0] + this.prog[1]) / (NOTAS.length * 2)
+        let r = Math.floor(160 - 130 * pureza)
+        let g = Math.floor(20 + 90 * pureza)
+        let b = Math.floor(30 + 180 * pureza)
+        des.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')'
+        des.fillRect(0, ALT - 90, LARG, 90)
+        des.fillStyle = 'rgba(255,255,255,0.12)'
+        for (let i = 0; i < 6; i++) {
+            des.fillRect(i * 160 + (Date.now() / 40 % 160), ALT - 80 + (i % 3) * 22, 60, 4)
+        }
+
+        this.harpas.forEach((h) => { h.des_obj() })
+        players.forEach((pl) => { pl.des_obj() })
+        this.notasVisuais.forEach((n) => { n.des_obj() })
+
+        this.desSequencia(0, 70, 100, TECLAS_NOTAS_P1)
+        this.desSequencia(1, LARG - 70 - 7 * 52, 100, TECLAS_NOTAS_P2)
+
+        let t = new Texto()
+        t.des_text('Toquem a escala sagrada para purificar a água!', LARG / 2, 88, '#f3e9d2', 'bold 17px monospace', 'center')
+    },
+    desSequencia(jogador, x, y, mapaTeclas) {
+        let teclasNota = Object.keys(mapaTeclas)
+        let prog = this.prog[jogador]
+        let nomeP = jogador === 0 ? NOMES.p1 : NOMES.p2
+        des.fillStyle = this.erro[jogador] > 0 ? '#ff5050' : (jogador === 0 ? '#3aa0ff' : '#37d67a')
+        des.font = 'bold 14px monospace'
+        des.fillText(nomeP + (prog >= NOTAS.length ? ' ✓ COMPLETO' : ''), x, y - 12)
+        NOTAS.forEach((n, i) => {
+            let nx = x + i * 52
+            des.fillStyle = i < prog ? '#37d67a' : (i === prog ? '#ffd84d' : 'rgba(255,255,255,0.15)')
+            des.fillRect(nx, y, 46, 46)
+            des.fillStyle = '#000'
+            des.font = 'bold 14px monospace'
+            des.textAlign = 'center'
+            des.fillText(n.nome, nx + 23, y + 22)
+            des.font = '11px monospace'
+            des.fillText('[' + teclasNota[i].toUpperCase() + ']', nx + 23, y + 38)
+            des.textAlign = 'left'
+        })
+    }
+}
+
 let fase2 = fabricaFaseTiro({
     nome: 'PRAGAS II–IV — Rãs, Piolhos e Moscas',
     fundo: 2,
