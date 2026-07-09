@@ -343,6 +343,140 @@ let fase3 = {
     }
 }
 
+let fase4 = {
+    nome: 'PRAGA VI — Úlceras e Feridas',
+    init() {
+        this.completa = false
+        this.grupoTiros = []
+        this.grupoColetaveis = []
+        this.amuletos = 0
+
+        this.paredes = [
+            new Parede(0, 60, LARG, 12),
+            new Parede(0, ALT - 12, LARG, 12),
+            new Parede(0, 60, 12, ALT - 60),
+            new Parede(LARG - 12, 60, 12, ALT - 60),
+            new Parede(12, 195, 600, 12),
+            new Parede(290, 330, LARG - 302, 12),
+            new Parede(12, 465, 600, 12),
+            new Parede(700, 72, 12, 80),
+            new Parede(150, 342, 12, 80)
+        ]
+
+        this.pocas = [
+            new Poca(200, 110, 70, 34), new Poca(520, 250, 70, 34),
+            new Poca(700, 245, 70, 34), new Poca(360, 390, 70, 34),
+            new Poca(740, 510, 70, 34), new Poca(120, 515, 70, 34)
+        ]
+
+        this.fontes = [new Fonte(810, 105), new Fonte(80, 255), new Fonte(810, 395)]
+
+        this.vasos = [
+            new Vaso(60, 130, 36, 46, 'assets/vaso1.png'),
+            new Vaso(420, 130, 36, 46, 'assets/vaso2.png'),
+            new Vaso(330, 250, 36, 46, 'assets/vaso3.png'),
+            new Vaso(600, 400, 36, 46, 'assets/vaso1.png'),
+            new Vaso(230, 525, 36, 46, 'assets/vaso2.png'),
+            new Vaso(560, 525, 36, 46, 'assets/vaso3.png')
+        ]
+        let indices = this.vasos.map((v, i) => i)
+        for (let i = indices.length - 1; i > 0; i--) {
+            let j = Math.floor(Math.random() * (i + 1))
+            let tmp = indices[i]; indices[i] = indices[j]; indices[j] = tmp
+        }
+        indices.slice(0, 3).forEach((i) => { this.vasos[i].temColetavel = true })
+
+        p1.x = 40; p1.y = 100; p1.facing = 'dir'
+        p2.x = 100; p2.y = 100; p2.facing = 'dir'
+    },
+    atual() {
+        let area = { x: 12, y: 72, w: LARG - 24, h: ALT - 84, vert: true }
+        players.forEach((pl) => {
+            pl.atualizaTimers()
+            pl.mov(area, this.paredes)
+            if (teclas[pl.teclas.tiro]) pl.atira(this.grupoTiros, 'lado')
+            this.pocas.forEach((poca) => {
+                if (pl.vivo && pl.colid(poca)) pl.levaDano(1)
+            })
+        })
+
+        for (let i = this.grupoTiros.length - 1; i >= 0; i--) {
+            let tiro = this.grupoTiros[i]
+            tiro.mov()
+            if (tiro.foraDaTela() || tiro.dono && this.paredes.some((pa) => tiro.colid(pa))) {
+                this.grupoTiros.splice(i, 1)
+                continue
+            }
+            let acertou = false
+            for (let j = this.fontes.length - 1; j >= 0; j--) {
+                let f = this.fontes[j]
+                if (tiro.colid(f)) {
+                    f.hp -= tiro.dano
+                    if (f.hp <= 0) {
+                        this.fontes.splice(j, 1)
+                        efeitoTexto('FONTE DESTRUÍDA!', f.x + 27, f.y, '#9dff3a')
+                        if (tiro.dono) tiro.dono.pts += 3
+                    }
+                    acertou = true
+                    break
+                }
+            }
+            if (!acertou) {
+                for (let j = 0; j < this.vasos.length; j++) {
+                    let v = this.vasos[j]
+                    if (!v.quebrado && tiro.colid(v)) {
+                        v.quebrado = true
+                        tocaSom(SONS.quebra)
+                        if (v.temColetavel) {
+                            this.grupoColetaveis.push(new Coletavel(v.x + 3, v.y + 8, 'amuleto', false))
+                        } else {
+                            efeitoTexto('vazio...', v.x + 18, v.y, '#8a7a5a')
+                        }
+                        acertou = true
+                        break
+                    }
+                }
+            }
+            if (acertou) this.grupoTiros.splice(i, 1)
+        }
+
+        for (let i = this.grupoColetaveis.length - 1; i >= 0; i--) {
+            let c = this.grupoColetaveis[i]
+            c.mov()
+            for (let j = 0; j < players.length; j++) {
+                let pl = players[j]
+                if (pl.vivo && pl.colid(c)) {
+                    if (c.tipo === 'amuleto') {
+                        this.amuletos += 1
+                        pl.cura(1)
+                        efeitoTexto('AMULETO ' + this.amuletos + '/3', pl.x + pl.w / 2, pl.y - 10, '#ffd84d')
+                        tocaSom(SONS.item)
+                    } else {
+                        aplicaColetavel(pl, c)
+                    }
+                    this.grupoColetaveis.splice(i, 1)
+                    break
+                }
+            }
+        }
+
+        if (this.fontes.length === 0 && this.amuletos >= 3) this.completa = true
+    },
+    des() {
+        desFundo(4)
+        this.pocas.forEach((p) => { p.des_obj() })
+        this.paredes.forEach((p) => { p.des_obj() })
+        this.vasos.forEach((v) => { if (!v.quebrado) v.des_obj() })
+        this.fontes.forEach((f) => { f.des_obj() })
+        this.grupoColetaveis.forEach((c) => { c.des_obj() })
+        this.grupoTiros.forEach((t) => { t.des_tiro() })
+        players.forEach((pl) => { pl.des_obj() })
+        let t = new Texto()
+        t.des_text('Fontes restantes: ' + this.fontes.length + '   |   Amuletos: ' + this.amuletos + '/3', LARG / 2, 88, '#f3e9d2', 'bold 16px monospace', 'center')
+        t.des_text('Cuidado com as poças de ácido!', LARG / 2, ALT - 24, '#9dff3a', '13px monospace', 'center')
+    }
+}
+
 let fase6 = fabricaFaseTiro({
     nome: 'PRAGA VIII — Invasão de Gafanhotos',
     fundo: 6,
