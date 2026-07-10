@@ -68,15 +68,126 @@ function desPainelPlayer(pl, x, nome, cor, invertido) {
 }
 
 function desHome() {
-    des.fillStyle = '#0b0805'
-    des.fillRect(0, 0, LARG, ALT)
-
-    let t = new Texto()
-    t.des_text('A CRIPTA PERDIDA', LARG / 2, ALT / 2 - 20, '#c4943a', 'bold 40px serif', 'center')
+    des.drawImage(pegaImg('assets/home.png'), 0, 0, LARG, ALT)
 
     piscaTimer += 1
     if (Math.floor(piscaTimer / 35) % 2 === 0) {
+        let t = new Texto()
         t.des_text('PRESSIONE ENTER', LARG / 2, ALT - 60, '#ffd84d', 'bold 24px monospace', 'center')
+    }
+}
+
+function desGameOver() {
+    des.fillStyle = 'rgba(20, 0, 0, 0.78)'
+    des.fillRect(0, 0, LARG, ALT)
+    let t = new Texto()
+    t.des_text('A CRIPTA OS CONSUMIU...', LARG / 2, ALT / 2 - 30, '#d63a3a', 'bold 42px serif', 'center')
+    t.des_text('As pragas avançam sobre o mundo.', LARG / 2, ALT / 2 + 10, '#f3e9d2', '17px monospace', 'center')
+    piscaTimer += 1
+    if (Math.floor(piscaTimer / 35) % 2 === 0) {
+        t.des_text('ENTER para tentar a fase novamente', LARG / 2, ALT / 2 + 70, '#ffd84d', 'bold 18px monospace', 'center')
+    }
+}
+
+let cenaFinal = {
+    t: 0,
+    creditos: [
+        'A CRIPTA PERDIDA',
+        '',
+        'As 10 pragas foram seladas.',
+        'O mundo segue em paz... por enquanto.',
+        '',
+        '— HISTÓRIA & GAME DESIGN —',
+        'Bello & Equipe',
+        '',
+        '— PROGRAMAÇÃO —',
+        'VAI Tecnologia',
+        '',
+        '— ARTE & SPRITES —',
+        '(em produção)',
+        '',
+        'Obrigado por jogar!',
+        '',
+        'FIM'
+    ],
+    init() {
+        this.t = 0
+    },
+    atual() {
+        this.t += 1
+    },
+    des() {
+        let grad = des.createLinearGradient(0, 0, 0, ALT)
+        grad.addColorStop(0, '#2a1a4a')
+        grad.addColorStop(0.45, '#c4502a')
+        grad.addColorStop(0.7, '#ffb347')
+        grad.addColorStop(1, '#d49a4a')
+        des.fillStyle = grad
+        des.fillRect(0, 0, LARG, ALT)
+
+        des.fillStyle = '#ffdf8a'
+        des.beginPath()
+        des.arc(LARG / 2, ALT * 0.62, 70, 0, Math.PI * 2)
+        des.fill()
+
+        des.fillStyle = '#7a4a22'
+        des.beginPath()
+        des.moveTo(140, ALT * 0.72); des.lineTo(330, ALT * 0.40); des.lineTo(520, ALT * 0.72)
+        des.closePath(); des.fill()
+        des.fillStyle = '#653a18'
+        des.beginPath()
+        des.moveTo(480, ALT * 0.72); des.lineTo(640, ALT * 0.48); des.lineTo(800, ALT * 0.72)
+        des.closePath(); des.fill()
+
+        des.fillStyle = '#caa05a'
+        des.fillRect(0, ALT * 0.72, LARG, ALT * 0.28)
+        des.fillStyle = '#b8904e'
+        des.beginPath()
+        des.ellipse(LARG * 0.3, ALT * 0.85, 260, 30, 0, 0, Math.PI * 2)
+        des.fill()
+
+        let camX = Math.min(LARG - 220, -80 + this.t * 0.55)
+        let camY = ALT * 0.74
+        des.fillStyle = '#2a1a0c'
+        des.fillRect(camX, camY, 90, 34)
+        des.beginPath()
+        des.arc(camX + 28, camY, 16, Math.PI, 0)
+        des.arc(camX + 62, camY, 16, Math.PI, 0)
+        des.fill()
+        des.fillRect(camX + 82, camY - 18, 10, 26)
+        des.fillRect(camX + 80, camY - 28, 18, 12)
+        let passo = Math.sin(this.t / 8) * 4
+        des.fillRect(camX + 10, camY + 32, 7, 26 + passo)
+        des.fillRect(camX + 34, camY + 32, 7, 26 - passo)
+        des.fillRect(camX + 56, camY + 32, 7, 26 + passo)
+        des.fillRect(camX + 78, camY + 32, 7, 26 - passo)
+        des.fillStyle = '#3aa0ff'
+        des.fillRect(camX + 18, camY - 22, 14, 20)
+        des.fillStyle = '#37d67a'
+        des.fillRect(camX + 50, camY - 22, 14, 20)
+
+        let baseY = ALT + 80 - this.t * 0.55
+        des.textAlign = 'center'
+        this.creditos.forEach((linha, i) => {
+            let y = baseY + i * 36
+            if (y > -20 && y < ALT + 30) {
+                des.fillStyle = i === 0 ? '#ffd84d' : '#fff6e0'
+                des.font = i === 0 ? 'bold 34px serif' : (linha.indexOf('—') === 0 ? 'bold 16px monospace' : '17px monospace')
+                des.fillText(linha, LARG / 2, y)
+            }
+        })
+        des.textAlign = 'left'
+
+        if (this.t > 300) {
+            piscaTimer += 1
+            if (Math.floor(piscaTimer / 35) % 2 === 0) {
+                des.fillStyle = '#fff6e0'
+                des.font = '14px monospace'
+                des.textAlign = 'center'
+                des.fillText('ENTER para voltar ao início', LARG / 2, ALT - 20)
+                des.textAlign = 'left'
+            }
+        }
     }
 }
 
