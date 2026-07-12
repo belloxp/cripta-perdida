@@ -71,21 +71,22 @@ function pegaImg(src) {
 }
 
 const SONS = {
-    tiro: null,
-    dano: null,
-    item: null,
-    quebra: null,
-    porta: null,
-    erro: null,
-    boss: null
+    tiro:   novoAudio('assets/audios/tiro.wav'),
+    dano:   novoAudio('assets/audios/dano.wav'),
+    item:   novoAudio('assets/audios/item.wav'),
+    quebra: novoAudio('assets/audios/quebra.wav'),
+    porta:  novoAudio('assets/audios/porta.wav'),
+    erro:   novoAudio('assets/audios/erro.wav')
 }
 function tocaSom(a) {
     if (!a) return
     try {
         a.currentTime = 0
         a.play().catch(() => {})
+        duckMusica(18)
     } catch (e) { /* sem áudio, segue o jogo */ }
 }
+// ---------- sistema de som ----------
 function novoAudio(src) {
     try { return new Audio(src) } catch (e) { return null }
 }
@@ -371,3 +372,55 @@ function quebraTexto(texto, maxLarg, font) {
     return linhas
 }
 
+
+// tiro é repetitivo → mais baixo pra não cansar
+const VOL_SONS = { tiro: 0.2, dano: 0.5, item: 0.5, quebra: 0.55, porta: 0.6, erro: 0.5 }
+
+
+// trilha de fundo + música do boss (loop). "Ducking": a trilha abaixa quando toca um efeito.
+const MUS_VOL = 0.45
+
+
+let musica = novoAudio('audios/soundtrack.mp3')
+
+
+let musicaBoss = novoAudio('assets/audios/boss.wav')
+
+
+let musDuck = 0
+
+
+let musicaComecou = false
+
+
+function iniciaMusica() {
+    musicaComecou = true
+    if (musica && musica.paused && (!musicaBoss || musicaBoss.paused)) musica.play().catch(() => {})
+}
+
+
+function iniciaMusicaBoss() {
+    if (musica) musica.pause()
+    if (musicaBoss) { musicaBoss.currentTime = 0; musicaBoss.play().catch(() => {}) }
+}
+
+
+function paraMusicaBoss() {
+    if (musicaBoss && !musicaBoss.paused) {
+        musicaBoss.pause()
+        if (musica && musicaComecou) musica.play().catch(() => {})
+    }
+}
+
+
+function duckMusica(frames) {
+    if (frames > musDuck) musDuck = frames
+}
+
+
+function atualizaAudio() {
+    if (!musica) return
+    let alvo = musDuck > 0 ? MUS_VOL * 0.28 : MUS_VOL
+    if (musDuck > 0) musDuck -= 1
+    musica.volume += (alvo - musica.volume) * 0.15
+}
