@@ -147,3 +147,101 @@ let fase6 = fabricaFaseTiro({
         { sprites: ['assets/gafanhotos1.png', 'assets/gafanhotos2.png', 'assets/gafanhotos3.png'], w: 52, h: 42, vel: [2.2, 3.5], intervalo: 95, sway: 0.6, hp: 2 }
     ]
 })
+
+
+// ============================================================
+//  FASE 8 — MORTE DOS PRIMOGÊNITOS (boss: Anjo da Morte)
+//  Tiro normal mirado + especial a cada X segundos (mais dano)
+// ============================================================
+let fase8 = {
+    nome: 'PRAGA X \u2014 O Anjo da Morte',
+    init() {
+        this.completa = false
+        this.boss = new Boss(LARG / 2 - 75, 95, 150, 160)
+        this.grupoTiros = []      // tiros dos players
+        this.grupoTirosBoss = []
+        this.grupoColetaveis = []
+        this.timeTiro = 0
+        this.timeDrop = 0
+        p1.x = 280; p1.y = ALT - 110; p1.facing = 'dir'
+        p2.x = 580; p2.y = ALT - 110; p2.facing = 'esq'
+        iniciaMusicaBoss()
+    },
+    atual() {
+        let area = { x: 10, y: ALT - 230, w: LARG - 20, h: 220, vert: true }
+        players.forEach((pl) => {
+            pl.atualizaTimers()
+            pl.mov(area)
+            if (teclas[pl.teclas.tiro]) pl.atira(this.grupoTiros, 'cima')
+        })
+
+        this.boss.mov()
+
+        // tiro normal do boss: mira em um player vivo aleatório
+        this.timeTiro += 1
+        if (this.timeTiro >= 55) {
+            this.timeTiro = 0
+            let vivos = players.filter((pl) => pl.vivo)
+            if (vivos.length > 0) {
+                let alvo = vivos[Math.floor(Math.random() * vivos.length)]
+                let bx = this.boss.x + this.boss.w / 2
+                let by = this.boss.y + this.boss.h
+                let dx = (alvo.x + alvo.w / 2) - bx
+                let dy = (alvo.y + alvo.h / 2) - by
+                let dist = Math.sqrt(dx * dx + dy * dy) || 1
+                this.grupoTirosBoss.push(new TiroBoss(bx - 21, by - 10, 42, 42, dx / dist * 4.5, dy / dist * 4.5, 1, false))
+            }
+        }
+
+        // tiros dos players x boss
+        for (let i = this.grupoTiros.length - 1; i >= 0; i--) {
+            let tiro = this.grupoTiros[i]
+            tiro.mov()
+            if (tiro.foraDaTela()) { this.grupoTiros.splice(i, 1); continue }
+            if (tiro.colid(this.boss)) {
+                this.boss.vida -= tiro.dano
+                if (tiro.dono) tiro.dono.pts += 1
+                this.grupoTiros.splice(i, 1)
+            }
+        }
+
+        // tiros do boss x players
+        for (let i = this.grupoTirosBoss.length - 1; i >= 0; i--) {
+            let tb = this.grupoTirosBoss[i]
+            tb.mov()
+            if (tb.y > ALT + 80 || tb.x < -80 || tb.x > LARG + 80) {
+                this.grupoTirosBoss.splice(i, 1)
+                continue
+            }
+            for (let j = 0; j < players.length; j++) {
+                let pl = players[j]
+                if (pl.vivo && pl.colid(tb)) {
+                    pl.levaDano(tb.dano)
+                    this.grupoTirosBoss.splice(i, 1)
+                    break
+                }
+            }
+        }
+
+        // desafio final: sem coletáveis aqui
+
+        if (this.boss.vida <= 0) {
+            this.boss.vida = 0
+            this.completa = true
+        }
+    },
+    des() {
+        desFundo(8)
+        this.boss.des_obj()
+        this.grupoTirosBoss.forEach((t) => { t.des_obj() })
+        this.grupoColetaveis.forEach((c) => { c.des_obj() })
+        this.grupoTiros.forEach((t) => { t.des_tiro() })
+        players.forEach((pl) => { pl.des_obj() })
+
+        // barra de vida do boss com rosto
+        let bx = LARG / 2 - 180
+        des.drawImage(pegaImg('assets/selecaoBoss1.png'), bx - 48, 66, 42, 42)
+        let barra = new BarraProgresso()
+        barra.des(bx, 76, 360, 22, this.boss.vida / this.boss.maxVida, '#2a1020', '#b14dff', 'ANJO DA MORTE: ' + Math.max(0, Math.ceil(this.boss.vida)))
+    }
+}
