@@ -58,6 +58,9 @@ class Parede extends Obj {
 
 let des = null 
 
+// ============================================================
+//  HARPA E NOTA MUSICAL (fase 1)
+// ============================================================
 class Harpa extends Obj {
     constructor(x, y, w, h) {
         super(x, y, w, h, 'assets/harpa_001.png')
@@ -86,8 +89,7 @@ class Harpa extends Obj {
 
 class NotaMusical extends Obj {
     constructor(x, y) {
-        let n = Math.floor(Math.random() * 3) + 1
-        super(x, y, 26, 26, 'assets/nota' + n + '.png')
+        super(x, y, 26, 26, 'assets/nota1.png')
         this.alpha = 1
         this.dx = (Math.random() - 0.5) * 1.4
     }
