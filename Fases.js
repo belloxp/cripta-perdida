@@ -128,23 +128,28 @@ function fabricaFaseTiro(cfg) {
     }
 }
 
+// FASE 2 — Rãs e moscas
 let fase2 = fabricaFaseTiro({
-    nome: 'PRAGAS II–IV — Rãs, Piolhos e Moscas',
+    nome: 'PRAGAS II\u2013IV \u2014 R\u00e3s, Moscas e Mosquitos',
     fundo: 2,
     meta: 20,
+    zonaTopo: 340, zonaBase: 580, // faixa onde inimigos e players andam (340 = onde o chão do fundo começa)
     spawns: [
-        { sprites: ['assets/ra1.png', 'assets/ra2.png', 'assets/ra3.png'], w: 48, h: 42, vel: [2, 3.2], intervalo: 55, sway: 0 },
-        { sprites: ['assets/moscas1.png', 'assets/moscas2.png', 'assets/moscas3.png'], w: 36, h: 30, vel: [3, 5], intervalo: 80, sway: 1.6 }
+        { sprites: ['assets/ra1.png', 'assets/ra2.png', 'assets/ra3.png'], sheet: 'assets/ra_sheet.png', frames: 3, w: 84, h: 44, vel: [4.5, 6.5], intervalo: 110, sway: 0 },
+        { sprites: ['assets/moscas1.png', 'assets/moscas2.png', 'assets/moscas3.png'], sheet: 'assets/mosquito_sheet.png', frames: 3, w: 62, h: 56, vel: [4, 6], intervalo: 80, sway: 2.2 },
+        { sprites: ['assets/moscas1.png', 'assets/moscas2.png', 'assets/moscas3.png'], sheet: 'assets/mosca_sheet.png', frames: 3, w: 68, h: 72, vel: [3, 4.5], intervalo: 100, sway: 1.4 }
     ]
 })
 
+// FASE 6 — Gafanhotos
 let fase6 = fabricaFaseTiro({
-    nome: 'PRAGA VIII — Invasão de Gafanhotos',
+    nome: 'PRAGA VIII \u2014 Invas\u00E3o de Gafanhotos',
     fundo: 6,
     meta: 25,
+    zonaTopo: 340, zonaBase: 580, // faixa onde inimigos e players andam (340 = onde o chão do fundo começa)
     spawns: [
-        { sprites: ['assets/gafanhotos1.png', 'assets/gafanhotos2.png', 'assets/gafanhotos3.png'], w: 40, h: 32, vel: [3, 5.5], intervalo: 38, sway: 1.2 },
-        { sprites: ['assets/gafanhotos1.png', 'assets/gafanhotos2.png', 'assets/gafanhotos3.png'], w: 52, h: 42, vel: [2.2, 3.5], intervalo: 95, sway: 0.6, hp: 2 }
+        { sprites: ['assets/gafanhotos1.png', 'assets/gafanhotos2.png', 'assets/gafanhotos3.png'], sheet: 'assets/gafanhoto_sheet.png', frames: 3, w: 66, h: 48, vel: [4, 6], intervalo: 38, sway: 1.6, anim: 0.05 },
+        { sprites: ['assets/gafanhotos1.png', 'assets/gafanhotos2.png', 'assets/gafanhotos3.png'], sheet: 'assets/gafanhoto_sheet.png', frames: 3, w: 80, h: 58, vel: [3, 4.5], intervalo: 90, sway: 0.8, hp: 2, anim: 0.05 }
     ]
 })
 

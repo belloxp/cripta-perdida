@@ -250,20 +250,42 @@ class Player extends Obj {
     }
 }
 
+// ============================================================
+//  INIMIGOS (rãs, moscas, gafanhotos)
+// ============================================================
 class Inimigo extends Obj {
-    constructor(x, y, w, h, at, vel, hp, sway) {
+    constructor(x, y, w, h, at, vel, hp, sway, sheet, frames, animVel) {
         super(x, y, w, h, at)
         this.vel = vel
         this.hp = hp
-        this.sway = sway || 0
-        this.fase = Math.random() * 6
+        this.sway = sway || 0          // balanço vertical enquanto anda pra esquerda
+        this.fase = Math.random() * 6  // offset do seno
+        this.sheet = sheet || null
+        this.frames = frames || 1
+        this.animT = Math.random() * 10
+        this.animVel = animVel || 0.12 // velocidade da troca de frame
     }
 
     mov() {
-        this.y += this.vel
+        this.x -= this.vel             // vem da direita, anda pra esquerda
         if (this.sway > 0) {
-            this.x += Math.sin(this.y / 28 + this.fase) * this.sway
+            this.y += Math.sin(this.x / 28 + this.fase) * this.sway
         }
+        this.animT += this.animVel
+    }
+
+    des_obj() {
+        // espelha na horizontal (a arte aponta pra direita, mas o inimigo anda pra esquerda)
+        des.save()
+        des.translate(this.x + this.w, this.y)
+        des.scale(-1, 1)
+        if (this.sheet) {
+            let f = Math.floor(this.animT) % this.frames
+            if (desSprite(this.sheet, this.frames, f, 0, 0, this.w, this.h)) { des.restore(); return }
+        }
+        let img = pegaImg(this.at)
+        if (img.complete && img.naturalWidth > 0) des.drawImage(img, 0, 0, this.w, this.h)
+        des.restore()
     }
 }
 
@@ -431,4 +453,14 @@ class TiroBoss extends Obj {
         let base = this.especial ? 'assets/bossEspecial_' : 'assets/bossTiro_'
         des.drawImage(pegaImg(base + (this.frame === 0 ? '001' : '002') + '.png'), this.x, this.y, this.w, this.h)
     }
+}
+
+
+// desenha 1 quadro de um spritesheet horizontal (quadros lado a lado, esquerda→direita)
+function desSprite(src, nFrames, frame, dx, dy, dw, dh) {
+    let img = pegaImg(src)
+    if (!img.complete || img.naturalWidth === 0) return false
+    let fw = img.naturalWidth / nFrames
+    des.drawImage(img, (frame % nFrames) * fw, 0, fw, img.naturalHeight, dx, dy, dw, dh)
+    return true
 }
