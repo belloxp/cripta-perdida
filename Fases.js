@@ -41,6 +41,11 @@ function atualizaColetaveis(grupo) {
     }
 }
 
+// ============================================================
+//  FÁBRICA DE FASES DE TIRO (fases 2 e 6)
+//  Mesma lógica do jogo base: timers de spawn, grupoTiros,
+//  splice ao colidir / sair da tela
+// ============================================================
 function fabricaFaseTiro(cfg) {
     return {
         nome: cfg.nome,
@@ -51,18 +56,21 @@ function fabricaFaseTiro(cfg) {
             this.grupoColetaveis = []
             this.timers = cfg.spawns.map(() => 0)
             this.mortes = 0
-            p1.x = 280; p1.y = ALT - 110; p1.facing = 'dir'
-            p2.x = 580; p2.y = ALT - 110; p2.facing = 'esq'
+            let zT = cfg.zonaTopo != null ? cfg.zonaTopo : 90
+            p1.x = 130; p1.y = zT + 20; p1.facing = 'dir'
+            p2.x = 130; p2.y = zT + 150; p2.facing = 'dir'
         },
         criaInimigo() {
+            let zTopo = cfg.zonaTopo != null ? cfg.zonaTopo : 90
+            let zBase = cfg.zonaBase != null ? cfg.zonaBase : ALT - 20
             cfg.spawns.forEach((s, i) => {
                 this.timers[i] += 1
                 if (this.timers[i] >= s.intervalo) {
                     this.timers[i] = 0
-                    let posX = Math.random() * (LARG - s.w - 20) + 10
+                    let posY = zTopo + Math.random() * (zBase - zTopo - s.h)
                     let sprite = s.sprites[Math.floor(Math.random() * s.sprites.length)]
                     let vel = Math.random() * (s.vel[1] - s.vel[0]) + s.vel[0]
-                    this.grupoInimigos.push(new Inimigo(posX, -s.h - 20, s.w, s.h, sprite, vel, s.hp || 1, s.sway))
+                    this.grupoInimigos.push(new Inimigo(LARG + 20, posY, s.w, s.h, sprite, vel, s.hp || 1, s.sway, s.sheet, s.frames, s.anim))
                 }
             })
         },
@@ -86,11 +94,14 @@ function fabricaFaseTiro(cfg) {
             }
         },
         atual() {
-            let area = { x: 10, y: ALT - 230, w: LARG - 20, h: 220, vert: true }
+            // zona (igual RUA_TOPO/RUA_BASE); player fica na faixa esquerda e atira pra direita
+            let zTopo = cfg.zonaTopo != null ? cfg.zonaTopo : 90
+            let zBase = cfg.zonaBase != null ? cfg.zonaBase : ALT - 20
+            let area = { x: 10, y: zTopo, w: LARG / 2 - 10, h: zBase - zTopo, vert: true }
             players.forEach((pl) => {
                 pl.atualizaTimers()
                 pl.mov(area)
-                if (teclas[pl.teclas.tiro]) pl.atira(this.grupoTiros, 'cima')
+                if (teclas[pl.teclas.tiro]) pl.atira(this.grupoTiros, 'lado')
             })
 
             this.criaInimigo()
@@ -102,7 +113,10 @@ function fabricaFaseTiro(cfg) {
             for (let i = this.grupoInimigos.length - 1; i >= 0; i--) {
                 let ini = this.grupoInimigos[i]
                 ini.mov()
-                if (ini.y > ALT + 30) { this.grupoInimigos.splice(i, 1); continue }
+                // o sway não pode tirar o inimigo da faixa
+                if (ini.y < zTopo) ini.y = zTopo
+                if (ini.y + ini.h > zBase) ini.y = zBase - ini.h
+                if (ini.x < -70) { this.grupoInimigos.splice(i, 1); continue }
                 for (let j = 0; j < players.length; j++) {
                     let pl = players[j]
                     if (pl.vivo && pl.colid(ini)) {
