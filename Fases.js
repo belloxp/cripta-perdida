@@ -162,6 +162,7 @@ let fase8 = {
         this.grupoTirosBoss = []
         this.grupoColetaveis = []
         this.timeTiro = 0
+        this.timeEspecial = 0
         this.timeDrop = 0
         p1.x = 280; p1.y = ALT - 110; p1.facing = 'dir'
         p2.x = 580; p2.y = ALT - 110; p2.facing = 'esq'
@@ -191,6 +192,15 @@ let fase8 = {
                 let dist = Math.sqrt(dx * dx + dy * dy) || 1
                 this.grupoTirosBoss.push(new TiroBoss(bx - 21, by - 10, 42, 42, dx / dist * 4.5, dy / dist * 4.5, 1, false))
             }
+        }
+
+        // ⚙️ ESPECIAL DO BOSS: a cada 8 segundos (480 frames), dano 3
+        this.timeEspecial += 1
+        if (this.timeEspecial >= 480) {
+            this.timeEspecial = 0
+            let bx = this.boss.x + this.boss.w / 2
+            this.grupoTirosBoss.push(new TiroBoss(bx - 30, this.boss.y + this.boss.h - 10, 60, 60, 0, 3, 3, true))
+            efeitoTexto('!!! ESPECIAL !!!', bx, this.boss.y - 10, '#ff3030')
         }
 
         // tiros dos players x boss
