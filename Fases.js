@@ -403,14 +403,20 @@ let fase3 = {
     }
 }
 
+// ============================================================
+//  FASE 4 — ÚLCERAS E FERIDAS (labirinto de grades de ferro)
+//  Poças de ácido dão dano. Atirar nas fontes de infecção.
+//  3 amuletos escondidos em vasos (distribuição aleatória).
+// ============================================================
 let fase4 = {
-    nome: 'PRAGA VI — Úlceras e Feridas',
+    nome: 'PRAGA VI \u2014 \u00DAlceras e Feridas',
     init() {
         this.completa = false
         this.grupoTiros = []
         this.grupoColetaveis = []
         this.amuletos = 0
 
+        // labirinto de grades de ferro
         this.paredes = [
             new Parede(0, 60, LARG, 12),
             new Parede(0, ALT - 12, LARG, 12),
@@ -423,14 +429,17 @@ let fase4 = {
             new Parede(150, 342, 12, 80)
         ]
 
+        // poças de pus/ácido
         this.pocas = [
             new Poca(200, 110, 70, 34), new Poca(520, 250, 70, 34),
             new Poca(700, 245, 70, 34), new Poca(360, 390, 70, 34),
             new Poca(740, 510, 70, 34), new Poca(120, 515, 70, 34)
         ]
 
+        // fontes de infecção (alvos)
         this.fontes = [new Fonte(810, 105), new Fonte(80, 255), new Fonte(810, 395)]
 
+        // vasos — 3 deles ganham amuleto, distribuído aleatoriamente
         this.vasos = [
             new Vaso(60, 130, 36, 46, 'assets/vaso1.png'),
             new Vaso(420, 130, 36, 46, 'assets/vaso2.png'),
@@ -439,6 +448,7 @@ let fase4 = {
             new Vaso(230, 525, 36, 46, 'assets/vaso2.png'),
             new Vaso(560, 525, 36, 46, 'assets/vaso3.png')
         ]
+        // sorteio: embaralha os índices e marca 3 com amuleto
         let indices = this.vasos.map((v, i) => i)
         for (let i = indices.length - 1; i > 0; i--) {
             let j = Math.floor(Math.random() * (i + 1))
@@ -455,11 +465,13 @@ let fase4 = {
             pl.atualizaTimers()
             pl.mov(area, this.paredes)
             if (teclas[pl.teclas.tiro]) pl.atira(this.grupoTiros, 'lado')
+            // dano das poças
             this.pocas.forEach((poca) => {
                 if (pl.vivo && pl.colid(poca)) pl.levaDano(1)
             })
         })
 
+        // tiros
         for (let i = this.grupoTiros.length - 1; i >= 0; i--) {
             let tiro = this.grupoTiros[i]
             tiro.mov()
@@ -467,6 +479,7 @@ let fase4 = {
                 this.grupoTiros.splice(i, 1)
                 continue
             }
+            // tiro x fonte
             let acertou = false
             for (let j = this.fontes.length - 1; j >= 0; j--) {
                 let f = this.fontes[j]
@@ -474,7 +487,7 @@ let fase4 = {
                     f.hp -= tiro.dano
                     if (f.hp <= 0) {
                         this.fontes.splice(j, 1)
-                        efeitoTexto('FONTE DESTRUÍDA!', f.x + 27, f.y, '#9dff3a')
+                        efeitoTexto('FONTE DESTRU\u00CDDA!', f.x + 27, f.y, '#9dff3a')
                         if (tiro.dono) tiro.dono.pts += 3
                     }
                     acertou = true
@@ -482,6 +495,7 @@ let fase4 = {
                 }
             }
             if (!acertou) {
+                // tiro x vaso
                 for (let j = 0; j < this.vasos.length; j++) {
                     let v = this.vasos[j]
                     if (!v.quebrado && tiro.colid(v)) {
@@ -500,6 +514,7 @@ let fase4 = {
             if (acertou) this.grupoTiros.splice(i, 1)
         }
 
+        // pegar amuletos
         for (let i = this.grupoColetaveis.length - 1; i >= 0; i--) {
             let c = this.grupoColetaveis[i]
             c.mov()
@@ -533,7 +548,7 @@ let fase4 = {
         players.forEach((pl) => { pl.des_obj() })
         let t = new Texto()
         t.des_text('Fontes restantes: ' + this.fontes.length + '   |   Amuletos: ' + this.amuletos + '/3', LARG / 2, 88, '#f3e9d2', 'bold 16px monospace', 'center')
-        t.des_text('Cuidado com as poças de ácido!', LARG / 2, ALT - 24, '#9dff3a', '13px monospace', 'center')
+        t.des_text('Cuidado com as po\u00E7as de \u00E1cido!', LARG / 2, ALT - 24, '#9dff3a', '13px monospace', 'center')
     }
 }
 

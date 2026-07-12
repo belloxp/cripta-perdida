@@ -109,6 +109,9 @@ class NotaMusical extends Obj {
     }
 }
 
+// ============================================================
+//  VASO E COLETÁVEL (fase 4 + drops)
+// ============================================================
 class Vaso extends Obj {
     constructor(x, y, w, h, at) {
         super(x, y, w, h, at)
@@ -150,6 +153,10 @@ class Poca extends Obj {
 
     des_obj() {
         this.t += 0.06
+        // sprite animado (4 quadros); desenha um pouco maior que a hitbox pra sobrar borda
+        let frame = Math.floor(this.t) % 4
+        if (desSprite('assets/poca_sheet.png', 4, frame, this.x - 8, this.y - 10, this.w + 16, this.h + 20)) return
+        // fallback: borrão procedural enquanto poca.png não existir
         let alpha = 0.55 + Math.sin(this.t) * 0.15
         des.fillStyle = 'rgba(150, 190, 40,' + alpha + ')'
         des.beginPath()
