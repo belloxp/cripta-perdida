@@ -128,30 +128,38 @@ function fabricaFaseTiro(cfg) {
     }
 }
 
+// ============================================================
+//  FASE 1 — ÁGUA EM SANGUE (harpa)
+//  Escala harmônica egípcia (dominante frígio):
+//  Dó - Ré bemol - Mi - Fá - Sol - Lá bemol - Si
+// ============================================================
 const NOTAS = [
-    { id: 'c',      nome: 'Dó',     audio: novoAudio('./audios/nota1.wav') },
-    { id: 'rbemol', nome: 'Ré♭', audio: novoAudio('./audios/nota2.wav') },
+    { id: 'c',      nome: 'D\u00F3',     audio: novoAudio('./audios/nota1.wav') },
+    { id: 'rbemol', nome: 'R\u00E9\u266D', audio: novoAudio('./audios/nota2.wav') },
     { id: 'e',      nome: 'Mi',          audio: novoAudio('./audios/nota3.wav') },
-    { id: 'f',      nome: 'Fá',     audio: novoAudio('./audios/nota4.wav') },
+    { id: 'f',      nome: 'F\u00E1',     audio: novoAudio('./audios/nota4.wav') },
     { id: 'g',      nome: 'Sol',         audio: novoAudio('./audios/nota5.wav') },
-    { id: 'lbemol', nome: 'Lá♭', audio: novoAudio('./audios/nota6.wav') },
+    { id: 'lbemol', nome: 'L\u00E1\u266D', audio: novoAudio('./audios/nota6.wav') },
     { id: 'b',      nome: 'Si',          audio: novoAudio('./audios/nota7.wav') }
 ]
+// Teclas das notas — P1 usa 1..7, P2 usa Q..U
 const TECLAS_NOTAS_P1 = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6 }
 const TECLAS_NOTAS_P2 = { 'q': 0, 'w': 1, 'e': 2, 'r': 3, 't': 4, 'y': 5, 'u': 6 }
 
 let fase1 = {
-    nome: 'PRAGA I — Água em Sangue',
+    nome: 'PRAGA I \u2014 \u00C1gua em Sangue',
     init() {
         this.completa = false
-        this.prog = [0, 0]
-        this.erro = [0, 0]
+        this.prog = [0, 0]        // progresso na sequência de cada player
+        this.erro = [0, 0]        // timer de flash de erro
         this.notasVisuais = []
         this.harpas = [new Harpa(150, 300, 150, 170), new Harpa(600, 300, 150, 170)]
         this.fimTimer = 0
+        // players parados ao lado das harpas
         p1.x = 90;  p1.y = 360; p1.facing = 'dir'
         p2.x = 770; p2.y = 360; p2.facing = 'esq'
     },
+    // chamado pelo keydown em cripta.js
     nota(jogador, idx) {
         if (this.completa || this.prog[jogador] >= NOTAS.length) return
         let pl = players[jogador]
@@ -185,6 +193,7 @@ let fase1 = {
     des() {
         desFundo(1)
 
+        // água no fundo: vai do vermelho (sangue) ao azul conforme o progresso
         let pureza = (this.prog[0] + this.prog[1]) / (NOTAS.length * 2)
         let r = Math.floor(160 - 130 * pureza)
         let g = Math.floor(20 + 90 * pureza)
@@ -200,11 +209,12 @@ let fase1 = {
         players.forEach((pl) => { pl.des_obj() })
         this.notasVisuais.forEach((n) => { n.des_obj() })
 
+        // UI da sequência de notas de cada player
         this.desSequencia(0, 70, 100, TECLAS_NOTAS_P1)
         this.desSequencia(1, LARG - 70 - 7 * 52, 100, TECLAS_NOTAS_P2)
 
         let t = new Texto()
-        t.des_text('Toquem a escala sagrada para purificar a água!', LARG / 2, 88, '#f3e9d2', 'bold 17px monospace', 'center')
+        t.des_text('Toquem a escala sagrada para purificar a \u00E1gua!', LARG / 2, 88, '#f3e9d2', 'bold 17px monospace', 'center')
     },
     desSequencia(jogador, x, y, mapaTeclas) {
         let teclasNota = Object.keys(mapaTeclas)
@@ -212,7 +222,7 @@ let fase1 = {
         let nomeP = jogador === 0 ? NOMES.p1 : NOMES.p2
         des.fillStyle = this.erro[jogador] > 0 ? '#ff5050' : (jogador === 0 ? '#3aa0ff' : '#37d67a')
         des.font = 'bold 14px monospace'
-        des.fillText(nomeP + (prog >= NOTAS.length ? ' ✓ COMPLETO' : ''), x, y - 12)
+        des.fillText(nomeP + (prog >= NOTAS.length ? ' \u2713 COMPLETO' : ''), x, y - 12)
         NOTAS.forEach((n, i) => {
             let nx = x + i * 52
             des.fillStyle = i < prog ? '#37d67a' : (i === prog ? '#ffd84d' : 'rgba(255,255,255,0.15)')
