@@ -371,3 +371,64 @@ function quebraTexto(texto, maxLarg, font) {
     return linhas
 }
 
+
+// ============================================================
+//  BOSS — ANJO DA MORTE
+// ============================================================
+class Boss extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, 'assets/boss_001.png')
+        this.maxVida = 150
+        this.vida = 150
+        this.frame = 0
+        this.frameTimer = 0
+        this.t = 0
+        this.baseX = x
+    }
+
+    mov() {
+        this.t += 1
+        this.x = this.baseX + Math.sin(this.t / 60) * 280
+        this.frameTimer += 1
+        if (this.frameTimer >= 14) {
+            this.frameTimer = 0
+            this.frame = this.frame === 0 ? 1 : 0
+        }
+    }
+
+    des_obj() {
+        let img = pegaImg('assets/boss_' + (this.frame === 0 ? '001' : '002') + '.png')
+        if (img.complete && img.naturalWidth > 0) des.drawImage(img, this.x, this.y, this.w, this.h)
+    }
+}
+
+
+// ============================================================
+//  TIRO DO BOSS (normal e especial — sprites animados)
+// ============================================================
+class TiroBoss extends Obj {
+    constructor(x, y, w, h, dx, dy, dano, especial) {
+        super(x, y, w, h, null)
+        this.dx = dx
+        this.dy = dy
+        this.dano = dano
+        this.especial = especial
+        this.frame = 0
+        this.frameTimer = 0
+    }
+
+    mov() {
+        this.x += this.dx
+        this.y += this.dy
+        this.frameTimer += 1
+        if (this.frameTimer >= 8) {
+            this.frameTimer = 0
+            this.frame = this.frame === 0 ? 1 : 0
+        }
+    }
+
+    des_obj() {
+        let base = this.especial ? 'assets/bossEspecial_' : 'assets/bossTiro_'
+        des.drawImage(pegaImg(base + (this.frame === 0 ? '001' : '002') + '.png'), this.x, this.y, this.w, this.h)
+    }
+}
