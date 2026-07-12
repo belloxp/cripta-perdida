@@ -202,3 +202,66 @@ function main() {
 }
 
 main()
+
+
+// ============================================================
+//  LOOP PRINCIPAL
+// ============================================================
+// tela de carregamento com a dica do GoldenCarlos (depois da fase da harpa)
+let telaDica = {
+    prog: 0,
+    des() {
+        des.fillStyle = '#0b0805'
+        des.fillRect(0, 0, LARG, ALT)
+        let t = new Texto()
+        t.des_text('DICAS', LARG / 2, 62, '#ffd84d', 'bold 40px serif', 'center')
+
+        // ícone do GoldenCarlos com brilho dourado, flutuando
+        let flut = Math.sin(this.prog / 10) * 5
+        des.save()
+        des.shadowColor = '#ffd84d'
+        des.shadowBlur = 26
+        let ic = pegaImg('assets/coletavel.png')
+        if (ic.complete && ic.naturalWidth > 0) des.drawImage(ic, LARG / 2 - 42, 82 + flut, 84, 84)
+        des.restore()
+
+        // dica principal do GoldenCarlos
+        let msg = 'GOLDENCARLOS: junte 5 espalhados pelas fases e ganhe +5 de vida máxima pro DESAFIO FINAL!'
+        let linhas = quebraTexto(msg, LARG - 180, 'bold 18px monospace')
+        des.fillStyle = '#ffe9b0'
+        des.font = 'bold 18px monospace'
+        des.textAlign = 'center'
+        linhas.forEach((l, i) => des.fillText(l, LARG / 2, 198 + i * 26))
+        des.textAlign = 'left'
+
+        // outras dicas
+        let dicas = [
+            'VIDA e FORÇA caem dos inimigos — curam e reforçam o tiro.',
+            'Na fórmula, sigam a ordem certa — errar tira vida dos dois.',
+            'Joguem em 2!  P1 = W A S D + F   •   P2 = setas + L.',
+            'No desafio final (boss) não cai coletável.'
+        ]
+        des.font = '16px monospace'
+        let y0 = 288
+        dicas.forEach((d, i) => {
+            des.fillStyle = '#ffd84d'
+            des.fillText('•', 130, y0 + i * 34)
+            des.fillStyle = '#f3e9d2'
+            des.fillText(d, 156, y0 + i * 34)
+        })
+
+        // barra de progresso
+        let bw = 440, bx = LARG / 2 - bw / 2, by = ALT - 88
+        des.fillStyle = '#2a2118'
+        des.fillRect(bx, by, bw, 24)
+        des.fillStyle = '#ffd84d'
+        des.fillRect(bx + 2, by + 2, (bw - 4) * (this.prog / 100), 20)
+        des.strokeStyle = '#5a4322'
+        des.lineWidth = 2
+        des.strokeRect(bx, by, bw, 24)
+        t.des_text('Carregando... ' + Math.floor(this.prog) + '%', LARG / 2, by - 12, '#c4943a', '14px monospace', 'center')
+        if (this.prog >= 100) {
+            t.des_text('PRESSIONE ENTER PARA COMEÇAR', LARG / 2, by + 48, '#ffd84d', 'bold 20px monospace', 'center')
+        }
+    }
+}

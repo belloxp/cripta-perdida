@@ -3,30 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <script src="Util.js" defer></script>
-    <script src="Cutscenes.js" defer></script>
-    <script src="Fases.js" defer></script>
-    <script src="cripta.js" defer></script>
+    <script src="Util.js?v=2" defer></script>
+    <script src="Cutscenes.js?v=2" defer></script>
+    <script src="Fases.js?v=2" defer></script>
+    <script src="cripta.js?v=2" defer></script>
     <title>A Cripta Perdida</title>
 </head>
 <body>
     <canvas id="des" width="900" height="600"></canvas>
 
+    <!-- MANUAL (overlay HTML) -->
+    <div id="manual" class="oculto">
+        <div class="manual-box">
+            <h1>MANUAL DO JOGO</h1>
+
+            <h2>Controles — 1 Player</h2>
+            <div class="teclas">
+                <div class="tgrupo"><div class="keys"><span class="key">A</span><span class="key">D</span></div><small>MOVER<br>LADOS</small></div>
+                <div class="tgrupo"><div class="keys"><span class="key">W</span><span class="key">S</span></div><small>CIMA /<br>BAIXO</small></div>
+                <div class="tgrupo"><div class="keys"><span class="key">F</span></div><small>ATIRAR</small></div>
+            </div>
+
+            <h2>Controles — 2 Players</h2>
+            <div class="teclas">
+                <div class="tgrupo"><div class="keys"><span class="key azul">&larr;</span><span class="key azul">&rarr;</span><span class="key azul">&uarr;</span><span class="key azul">&darr;</span></div><small>P2 MOVER</small></div>
+                <div class="tgrupo"><div class="keys"><span class="key azul">L</span></div><small>P2 ATIRAR</small></div>
+            </div>
+
+            <h2>Coletáveis</h2>
+            <div class="grid">
+                <div class="card"><span class="ico" data-img="coletavel.png"></span><div class="info"><h3>GOLDENCARLOS</h3><p>Junte 5 e ganhe +5 de vida máxima.</p><span class="tag bonus">BÔNUS</span></div></div>
+            </div>
+
+            <h2>Inimigos & Obstáculos</h2>
+            <div class="grid">
+                <div class="card"><span class="ico" data-img="ra_sheet.png" data-frames="3"></span><div class="info"><h3>RÃ</h3><p>Vem da direita aos pulos. Colisão: -1 vida.</p><span class="tag perigo">PERIGO</span></div></div>
+                <div class="card"><span class="ico" data-img="mosquito_sheet.png" data-frames="3"></span><div class="info"><h3>MOSQUITO</h3><p>Rápido, vem da direita. Colisão: -1 vida.</p><span class="tag perigo">PERIGO</span></div></div>
+                <div class="card"><span class="ico" data-img="mosca_sheet.png" data-frames="3"></span><div class="info"><h3>MOSCA</h3><p>Maior e mais lenta. Colisão: -1 vida.</p><span class="tag perigo">PERIGO</span></div></div>
+                <div class="card"><span class="ico" data-img="gafanhoto_sheet.png" data-frames="3"></span><div class="info"><h3>GAFANHOTO</h3><p>Vem em enxame. Colisão: -1 vida.</p><span class="tag perigo">PERIGO</span></div></div>
+                <div class="card"><span class="ico" data-imgs="granizo1.png,granizo2.png,granizo3.png"></span><div class="info"><h3>GRANIZO</h3><p>Cai do céu (fase 5). Colisão: -1 vida.</p><span class="tag perigo">PERIGO</span></div></div>
+            </div>
+
+            <h2>Boss</h2>
+            <div class="grid">
+                <div class="card largo"><span class="ico" data-imgs="boss_001.png,boss_002.png"></span><div class="info"><h3>ANJO DA MORTE</h3><p>Chefe final. Atira mirado e solta um ataque especial a cada 8s. A colisão tira muita vida!</p><span class="tag boss">BOSS</span></div></div>
+            </div>
+
+            <button id="fecharManual">&#9664;&nbsp; VOLTAR AO JOGO</button>
+        </div>
+    </div>
+
+    <!-- Tratamento de erro: se algum script quebrar, mostra o erro no canvas -->
     <script>
         window.addEventListener('error', (ev) => {
             try {
                 const c = document.getElementById('des')
                 const ctx = c.getContext('2d')
+                ctx.setTransform(1, 0, 0, 1, 0, 0)
                 ctx.fillStyle = '#1a0d0d'
                 ctx.fillRect(0, 0, c.width, c.height)
                 ctx.fillStyle = '#ff6b6b'
+                ctx.font = '30px monospace'
+                ctx.fillText('ERRO NO JOGO:', 30, 60)
                 ctx.font = '20px monospace'
-                ctx.fillText('ERRO NO JOGO:', 20, 40)
-                ctx.font = '14px monospace'
-                ctx.fillText(String(ev.message).slice(0, 100), 20, 70)
-                ctx.fillText((ev.filename || '').split('/').pop() + ' : linha ' + ev.lineno, 20, 95)
-            } catch (e) {  }
+                ctx.fillText(String(ev.message).slice(0, 90), 30, 100)
+                ctx.fillText((ev.filename || '').split('/').pop() + ' : linha ' + ev.lineno, 30, 135)
+            } catch (e) { /* canvas indisponível */ }
         })
     </script>
 </body>
