@@ -28,12 +28,32 @@ class Coletavel extends Obj {
     }
 }
 
+// ============================================================
+//  PAREDE (grades de ferro dos labirintos) E PORTA
+// ============================================================
 class Parede extends Obj {
     constructor(x, y, w, h) {
         super(x, y, w, h, null)
     }
 
     des_obj() {
+        let img = pegaImg('assets/muro.png')
+        if (img.complete && img.naturalWidth > 0) {
+            if (!Parede._pat) {
+                let tile = document.createElement('canvas')
+                tile.width = 220; tile.height = 220
+                tile.getContext('2d').drawImage(img, 0, 0, 220, 220)
+                Parede._pat = des.createPattern(tile, 'repeat')
+            }
+            des.save()
+            des.beginPath()
+            des.rect(this.x, this.y, this.w, this.h)
+            des.clip()
+            des.fillStyle = Parede._pat
+            des.fillRect(this.x, this.y, this.w, this.h)
+            des.restore()
+            return
+        }
         des.fillStyle = '#2c2c33'
         des.fillRect(this.x, this.y, this.w, this.h)
         des.strokeStyle = '#55555f'

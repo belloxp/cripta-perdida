@@ -642,28 +642,42 @@ let fase6 = fabricaFaseTiro({
     ]
 })
 
+// ============================================================
+//  FASE 7 — TREVAS (labirinto com luz baixa)
+//  Andar no escuro e achar a saída. Luz só ao redor dos players.
+// ============================================================
 let fase7 = {
-    nome: 'PRAGA IX — Trevas',
+    nome: 'PRAGA IX \u2014 Trevas',
     init() {
         this.completa = false
+        // labirinto em grade 6x5: um caminho certo, dois falsos e becos curtos
         this.paredes = [
             new Parede(0, 60, LARG, 12),
             new Parede(0, ALT - 12, LARG, 12),
             new Parede(0, 60, 12, ALT - 60),
             new Parede(LARG - 12, 60, 12, ALT - 60),
-            new Parede(220, 72, 12, 388),
-            new Parede(450, 200, 12, ALT - 200),
-            new Parede(680, 72, 12, 388)
+            new Parede(140, 170, 14, 116),
+            new Parede(140, 374, 14, 214),
+            new Parede(280, 170, 14, 320),
+            new Parede(420, 272, 14, 116),
+            new Parede(560, 170, 14, 116),
+            new Parede(560, 374, 14, 214),
+            new Parede(700, 272, 14, 218),
+            new Parede(140, 170, 748, 14),
+            new Parede(420, 272, 154, 14),
+            new Parede(560, 374, 154, 14),
+            new Parede(280, 476, 154, 14)
         ]
-        this.porta = new Porta(LARG - 70, ALT - 110, 46, 86)
+        this.porta = new Porta(LARG - 95, ALT - 150, 76, 135)
         this.fimTimer = 0
+        // canvas de escuridão (criado uma vez)
         if (!this.escuro) {
             this.escuro = document.createElement('canvas')
             this.escuro.width = LARG
             this.escuro.height = ALT
         }
-        p1.x = 50; p1.y = 100; p1.facing = 'dir'
-        p2.x = 120; p2.y = 100; p2.facing = 'dir'
+        p1.x = 30; p1.y = 95; p1.facing = 'dir'
+        p2.x = 84; p2.y = 95; p2.facing = 'dir'
     },
     atual() {
         let area = { x: 12, y: 72, w: LARG - 24, h: ALT - 84, vert: true }
@@ -671,6 +685,7 @@ let fase7 = {
             pl.atualizaTimers()
             pl.mov(area, this.paredes)
         })
+        // os dois (vivos) precisam chegar na porta
         let vivos = players.filter((pl) => pl.vivo)
         if (vivos.length > 0 && vivos.every((pl) => pl.colid(this.porta))) {
             this.fimTimer += 1
@@ -685,27 +700,28 @@ let fase7 = {
         this.porta.des_obj()
         players.forEach((pl) => { pl.des_obj() })
 
+        // camada de escuridão com furos de luz ao redor dos players
         let ctx2 = this.escuro.getContext('2d')
         ctx2.clearRect(0, 0, LARG, ALT)
-        ctx2.fillStyle = 'rgba(0,0,0,0.94)'
+        ctx2.fillStyle = '#000'
         ctx2.fillRect(0, 0, LARG, ALT)
         ctx2.globalCompositeOperation = 'destination-out'
         players.forEach((pl) => {
             if (!pl.vivo) return
             let grad = ctx2.createRadialGradient(
-                pl.x + pl.w / 2, pl.y + pl.h / 2, 20,
-                pl.x + pl.w / 2, pl.y + pl.h / 2, 120)
+                pl.x + pl.w / 2, pl.y + pl.h / 2, 10,
+                pl.x + pl.w / 2, pl.y + pl.h / 2, 60)
             grad.addColorStop(0, 'rgba(0,0,0,1)')
             grad.addColorStop(1, 'rgba(0,0,0,0)')
             ctx2.fillStyle = grad
             ctx2.beginPath()
-            ctx2.arc(pl.x + pl.w / 2, pl.y + pl.h / 2, 120, 0, Math.PI * 2)
+            ctx2.arc(pl.x + pl.w / 2, pl.y + pl.h / 2, 60, 0, Math.PI * 2)
             ctx2.fill()
         })
         ctx2.globalCompositeOperation = 'source-over'
         des.drawImage(this.escuro, 0, 0)
 
         let t = new Texto()
-        t.des_text('Encontrem a saída na escuridão...', LARG / 2, 88, 'rgba(243,233,210,0.6)', 'italic 15px monospace', 'center')
+        t.des_text('Encontrem a sa\u00EDda na escurid\u00E3o...', LARG / 2, 88, 'rgba(243,233,210,0.6)', 'italic 15px monospace', 'center')
     }
 }
