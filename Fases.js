@@ -248,15 +248,20 @@ let fase2 = fabricaFaseTiro({
     ]
 })
 
+// ============================================================
+//  FASE 3 — PESTE NO GADO (fórmula do antídoto)
+//  ⚙️ MECÂNICA AJUSTÁVEL: a receita, os ingredientes e a dica
+//  estão concentrados aqui em cima pra facilitar mudanças.
+// ============================================================
 let fase3 = {
-    nome: 'PRAGA V — Peste no Gado',
+    nome: 'PRAGAS V\u2013VI \u2014 Peste no Gado e \u00dalceras',
     INGREDIENTES: [
         { nome: 'Ervas Sagradas', cor: '#4f9e3a' },
-        { nome: 'Água do Nilo', cor: '#3a7ddb' },
+        { nome: '\u00C1gua do Nilo', cor: '#3a7ddb' },
         { nome: 'Sal do Deserto', cor: '#e8e2cf' }
     ],
-    receita: [1, 2, 0],
-    dica: '"Primeiro o rio que dá vida, depois o sal que preserva, por fim a erva que cura."',
+    receita: [1, 2, 0], // ordem correta: Água do Nilo → Sal do Deserto → Ervas Sagradas
+    dica: '"Primeiro o rio que d\u00E1 vida, depois o sal que preserva, por fim a erva que cura."',
     init() {
         this.completa = false
         this.passo = 0
@@ -264,9 +269,12 @@ let fase3 = {
         this.feedbackTimer = 0
         this.fimTimer = 0
         this.borbulha = 0
-        p1.x = 250; p1.y = 400; p1.facing = 'dir'
-        p2.x = 610; p2.y = 400; p2.facing = 'esq'
+        this.grupoTiros = []
+        this.fontes = [new Fonte(100, 400), new Fonte(760, 400), new Fonte(430, 520)]
+        p1.x = 240; p1.y = 440; p1.facing = 'dir'
+        p2.x = 580; p2.y = 440; p2.facing = 'esq'
     },
+    // chamado pelo keydown em cripta.js (idx 0..2)
     ingrediente(idx) {
         if (this.completa || this.passo >= this.receita.length) return
         if (idx === this.receita[this.passo]) {
@@ -277,24 +285,54 @@ let fase3 = {
             tocaSom(SONS.item)
         } else {
             this.passo = 0
-            this.feedback = 'Ingrediente errado! O caldeirão ferveu em fúria!'
+            this.feedback = 'Ingrediente errado! O caldeir\u00E3o ferveu em f\u00FAria!'
             this.feedbackTimer = 90
             players.forEach((pl) => { pl.levaDano(1) })
             tocaSom(SONS.erro)
         }
     },
     atual() {
-        players.forEach((pl) => { pl.atualizaTimers() })
+        let area = { x: 20, y: 340, w: LARG - 40, h: ALT - 360, vert: true }
+        players.forEach((pl) => {
+            pl.atualizaTimers()
+            pl.mov(area)
+            if (teclas[pl.teclas.tiro]) pl.atira(this.grupoTiros, 'lado')
+        })
         if (this.feedbackTimer > 0) this.feedbackTimer -= 1
         if (this.borbulha > 0) this.borbulha -= 1
-        if (this.passo >= this.receita.length) {
+
+        // tiros x fontes de infecção
+        for (let i = this.grupoTiros.length - 1; i >= 0; i--) {
+            let tiro = this.grupoTiros[i]
+            tiro.mov()
+            if (tiro.foraDaTela()) { this.grupoTiros.splice(i, 1); continue }
+            for (let j = this.fontes.length - 1; j >= 0; j--) {
+                let f = this.fontes[j]
+                if (tiro.colid(f)) {
+                    f.hp -= tiro.dano
+                    if (f.hp <= 0) {
+                        this.fontes.splice(j, 1)
+                        efeitoTexto('FONTE DESTRUÍDA!', f.x + 27, f.y, '#9dff3a')
+                        if (tiro.dono) tiro.dono.pts += 3
+                    }
+                    this.grupoTiros.splice(i, 1)
+                    break
+                }
+            }
+        }
+
+        // vence quando a fórmula está pronta E todas as fontes destruídas
+        if (this.passo >= this.receita.length && this.fontes.length === 0) {
             this.fimTimer += 1
-            if (this.fimTimer > 100) this.completa = true
+            if (this.fimTimer > 60) this.completa = true
+        } else {
+            this.fimTimer = 0
         }
     },
     des() {
         desFundo(3)
 
+        // gado ao fundo (silhuetas — substituível por asset depois)
         des.fillStyle = this.passo >= this.receita.length ? '#caa86a' : '#6b5a44'
         for (let i = 0; i < 4; i++) {
             let gx = 80 + i * 210
@@ -304,15 +342,21 @@ let fase3 = {
             des.fillRect(gx + 70, 226, 10, 22)
         }
 
+        // caldeirão (imagem estática — sem sheet, pra não "andar" de lado)
         let cx = LARG / 2 - 70, cy = 330
-        des.fillStyle = '#222'
-        des.beginPath()
-        des.ellipse(cx + 70, cy + 70, 90, 60, 0, 0, Math.PI * 2)
-        des.fill()
-        des.fillStyle = this.passo > 0 ? '#7dd34a' : '#5d4a8a'
-        des.beginPath()
-        des.ellipse(cx + 70, cy + 30, 74, 22, 0, 0, Math.PI * 2)
-        des.fill()
+        let cald = pegaImg('assets/caldeirao.png')
+        if (cald.complete && cald.naturalWidth > 0) {
+            des.drawImage(cald, cx - 5, cy - 55, 150, 205)
+        } else {
+            des.fillStyle = '#222'
+            des.beginPath()
+            des.ellipse(cx + 70, cy + 70, 90, 60, 0, 0, Math.PI * 2)
+            des.fill()
+            des.fillStyle = this.passo > 0 ? '#7dd34a' : '#5d4a8a'
+            des.beginPath()
+            des.ellipse(cx + 70, cy + 30, 74, 22, 0, 0, Math.PI * 2)
+            des.fill()
+        }
         if (this.borbulha > 0) {
             des.fillStyle = 'rgba(255,255,255,0.5)'
             for (let i = 0; i < 5; i++) {
@@ -322,10 +366,13 @@ let fase3 = {
             }
         }
 
+        this.fontes.forEach((f) => { f.des_obj() })
+        this.grupoTiros.forEach((tr) => { tr.des_tiro() })
         players.forEach((pl) => { pl.des_obj() })
 
+        // UI da fórmula
         let t = new Texto()
-        t.des_text('Preparem o antídoto na ordem correta:', LARG / 2, 92, '#f3e9d2', 'bold 17px monospace', 'center')
+        t.des_text('Preparem o ant\u00EDdoto na ordem correta:', LARG / 2, 92, '#f3e9d2', 'bold 17px monospace', 'center')
         t.des_text(this.dica, LARG / 2, 118, '#c4943a', 'italic 15px monospace', 'center')
 
         this.INGREDIENTES.forEach((ing, i) => {
@@ -341,14 +388,17 @@ let fase3 = {
             des.textAlign = 'left'
         })
 
+        // progresso da receita
         let barra = new BarraProgresso()
-        barra.des(LARG / 2 - 120, 215, 240, 22, this.passo / this.receita.length, '#2a2118', '#7dd34a', 'Fórmula: ' + this.passo + '/' + this.receita.length)
+        barra.des(LARG / 2 - 120, 215, 240, 22, this.passo / this.receita.length, '#2a2118', '#7dd34a', 'F\u00F3rmula: ' + this.passo + '/' + this.receita.length)
 
         if (this.feedbackTimer > 0) {
             t.des_text(this.feedback, LARG / 2, 268, this.feedback.indexOf('errado') >= 0 ? '#ff5050' : '#7dd34a', 'bold 16px monospace', 'center')
         }
-        if (this.passo >= this.receita.length) {
+        if (this.passo >= this.receita.length && this.fontes.length === 0) {
             t.des_text('O GADO FOI SALVO!', LARG / 2, 300, '#ffd84d', 'bold 24px monospace', 'center')
+        } else {
+            t.des_text('Fontes de infecção restantes: ' + this.fontes.length + '  — atire nelas!', LARG / 2, 300, '#9dff3a', 'bold 15px monospace', 'center')
         }
     }
 }

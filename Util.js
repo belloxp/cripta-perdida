@@ -117,14 +117,24 @@ class Vaso extends Obj {
     }
 }
 
+// ============================================================
+//  FONTE DE INFECÇÃO E POÇA DE ÁCIDO (fase 4)
+// ============================================================
 class Fonte extends Obj {
     constructor(x, y) {
         super(x, y, 54, 54, 'assets/fonte.png')
         this.hp = 6
+        this.t = Math.random() * 4
     }
 
     des_obj() {
-        des.drawImage(pegaImg(this.at), this.x, this.y, this.w, this.h)
+        this.t += 0.06
+        let f = Math.floor(this.t) % 4
+        if (!desSprite('assets/fonte_sheet.png', 4, f, this.x, this.y, this.w, this.h)) {
+            let img = pegaImg(this.at)
+            if (img.complete && img.naturalWidth > 0) des.drawImage(img, this.x, this.y, this.w, this.h)
+        }
+        // mini barra de vida da fonte
         des.fillStyle = '#222'
         des.fillRect(this.x, this.y - 10, this.w, 6)
         des.fillStyle = '#9dff3a'
