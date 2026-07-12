@@ -251,20 +251,42 @@ class Player extends Obj {
     }
 }
 
+// ============================================================
+//  INIMIGOS (rãs, moscas, gafanhotos)
+// ============================================================
 class Inimigo extends Obj {
-    constructor(x, y, w, h, at, vel, hp, sway) {
+    constructor(x, y, w, h, at, vel, hp, sway, sheet, frames, animVel) {
         super(x, y, w, h, at)
         this.vel = vel
         this.hp = hp
-        this.sway = sway || 0
-        this.fase = Math.random() * 6
+        this.sway = sway || 0          // balanço vertical enquanto anda pra esquerda
+        this.fase = Math.random() * 6  // offset do seno
+        this.sheet = sheet || null
+        this.frames = frames || 1
+        this.animT = Math.random() * 10
+        this.animVel = animVel || 0.12 // velocidade da troca de frame
     }
 
     mov() {
-        this.y += this.vel
+        this.x -= this.vel             // vem da direita, anda pra esquerda
         if (this.sway > 0) {
-            this.x += Math.sin(this.y / 28 + this.fase) * this.sway
+            this.y += Math.sin(this.x / 28 + this.fase) * this.sway
         }
+        this.animT += this.animVel
+    }
+
+    des_obj() {
+        // espelha na horizontal (a arte aponta pra direita, mas o inimigo anda pra esquerda)
+        des.save()
+        des.translate(this.x + this.w, this.y)
+        des.scale(-1, 1)
+        if (this.sheet) {
+            let f = Math.floor(this.animT) % this.frames
+            if (desSprite(this.sheet, this.frames, f, 0, 0, this.w, this.h)) { des.restore(); return }
+        }
+        let img = pegaImg(this.at)
+        if (img.complete && img.naturalWidth > 0) des.drawImage(img, 0, 0, this.w, this.h)
+        des.restore()
     }
 }
 
@@ -372,38 +394,29 @@ function quebraTexto(texto, maxLarg, font) {
     return linhas
 }
 
-
 // tiro é repetitivo → mais baixo pra não cansar
 const VOL_SONS = { tiro: 0.2, dano: 0.5, item: 0.5, quebra: 0.55, porta: 0.6, erro: 0.5 }
-
 
 // trilha de fundo + música do boss (loop). "Ducking": a trilha abaixa quando toca um efeito.
 const MUS_VOL = 0.45
 
-
 let musica = novoAudio('audios/soundtrack.mp3')
-
 
 let musicaBoss = novoAudio('assets/audios/boss.wav')
 
-
 let musDuck = 0
 
-
 let musicaComecou = false
-
 
 function iniciaMusica() {
     musicaComecou = true
     if (musica && musica.paused && (!musicaBoss || musicaBoss.paused)) musica.play().catch(() => {})
 }
 
-
 function iniciaMusicaBoss() {
     if (musica) musica.pause()
     if (musicaBoss) { musicaBoss.currentTime = 0; musicaBoss.play().catch(() => {}) }
 }
-
 
 function paraMusicaBoss() {
     if (musicaBoss && !musicaBoss.paused) {
@@ -412,15 +425,82 @@ function paraMusicaBoss() {
     }
 }
 
-
 function duckMusica(frames) {
     if (frames > musDuck) musDuck = frames
 }
-
 
 function atualizaAudio() {
     if (!musica) return
     let alvo = musDuck > 0 ? MUS_VOL * 0.28 : MUS_VOL
     if (musDuck > 0) musDuck -= 1
     musica.volume += (alvo - musica.volume) * 0.15
+}
+
+// ============================================================
+//  BOSS — ANJO DA MORTE
+// ============================================================
+class Boss extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, 'assets/boss_001.png')
+        this.maxVida = 150
+        this.vida = 150
+        this.frame = 0
+        this.frameTimer = 0
+        this.t = 0
+        this.baseX = x
+    }
+
+    mov() {
+        this.t += 1
+        this.x = this.baseX + Math.sin(this.t / 60) * 280
+        this.frameTimer += 1
+        if (this.frameTimer >= 14) {
+            this.frameTimer = 0
+            this.frame = this.frame === 0 ? 1 : 0
+        }
+    }
+
+    des_obj() {
+        let img = pegaImg('assets/boss_' + (this.frame === 0 ? '001' : '002') + '.png')
+        if (img.complete && img.naturalWidth > 0) des.drawImage(img, this.x, this.y, this.w, this.h)
+    }
+}
+
+// ============================================================
+//  TIRO DO BOSS (normal e especial — sprites animados)
+// ============================================================
+class TiroBoss extends Obj {
+    constructor(x, y, w, h, dx, dy, dano, especial) {
+        super(x, y, w, h, null)
+        this.dx = dx
+        this.dy = dy
+        this.dano = dano
+        this.especial = especial
+        this.frame = 0
+        this.frameTimer = 0
+    }
+
+    mov() {
+        this.x += this.dx
+        this.y += this.dy
+        this.frameTimer += 1
+        if (this.frameTimer >= 8) {
+            this.frameTimer = 0
+            this.frame = this.frame === 0 ? 1 : 0
+        }
+    }
+
+    des_obj() {
+        let base = this.especial ? 'assets/bossEspecial_' : 'assets/bossTiro_'
+        des.drawImage(pegaImg(base + (this.frame === 0 ? '001' : '002') + '.png'), this.x, this.y, this.w, this.h)
+    }
+}
+
+// desenha 1 quadro de um spritesheet horizontal (quadros lado a lado, esquerda→direita)
+function desSprite(src, nFrames, frame, dx, dy, dw, dh) {
+    let img = pegaImg(src)
+    if (!img.complete || img.naturalWidth === 0) return false
+    let fw = img.naturalWidth / nFrames
+    des.drawImage(img, (frame % nFrames) * fw, 0, fw, img.naturalHeight, dx, dy, dw, dh)
+    return true
 }
