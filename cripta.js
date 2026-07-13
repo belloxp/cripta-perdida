@@ -262,6 +262,11 @@ const btnJogar = { x: LARG / 2 - 118, y: 404, w: 236, h: 50 }
 const btnManual = { x: LARG / 2 - 118, y: 462, w: 236, h: 40 }
 const btnSobre = { x: LARG / 2 - 118, y: 510, w: 236, h: 40 }
 
+// ---------- botões da tela de modos ----------
+const btnHistoria = { x: LARG / 2 - 200, y: 196, w: 400, h: 86, t: 'MODO HISTORIA', s: 'As dez pragas — cooperativo' }
+const btnSobrev = { x: LARG / 2 - 200, y: 300, w: 400, h: 86, t: 'SOBREVIVENCIA', s: 'Ondas infinitas, cada vez mais difícil' }
+const btnPvp = { x: LARG / 2 - 200, y: 404, w: 400, h: 86, t: '1 VS 1', s: 'Duelo entre os dois jogadores' }
+
 function dentroDe(mx, my, b) {
     return mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h
 }
@@ -355,6 +360,58 @@ function desHome() {
     des.strokeText('ENTER  JOGAR     M  MANUAL     N  EQUIPE', LARG / 2, ALT - 22)
     des.fillStyle = '#e8c98a'
     des.fillText('ENTER  JOGAR     M  MANUAL     N  EQUIPE', LARG / 2, ALT - 22)
+    des.textAlign = 'left'
+    des.restore()
+}
+
+// estela grande com título e subtítulo (tela de modos)
+function desBotaoModo(b) {
+    let hover = dentroDe(mouseX, mouseY, b)
+    let y = b.y + (hover ? 2 : 0)
+    des.save()
+    des.shadowColor = 'rgba(0,0,0,0.6)'
+    des.shadowBlur = 10
+    des.shadowOffsetY = 4
+    caminhoChanfrado(b.x, y, b.w, b.h, 12)
+    let g = des.createLinearGradient(0, y, 0, y + b.h)
+    g.addColorStop(0, hover ? '#33210f' : '#1e1409')
+    g.addColorStop(1, hover ? '#1d1207' : '#0f0904')
+    des.fillStyle = g
+    des.fill()
+    des.restore()
+    caminhoChanfrado(b.x, y, b.w, b.h, 12)
+    des.strokeStyle = hover ? '#ffd84d' : '#8a6a33'
+    des.lineWidth = 2
+    des.stroke()
+    des.textAlign = 'center'
+    des.textBaseline = 'middle'
+    des.fillStyle = hover ? '#ffd84d' : '#e8c98a'
+    des.font = '15px "Press Start 2P", monospace'
+    des.fillText(b.t, b.x + b.w / 2, y + 32)
+    des.fillStyle = hover ? '#d9c9a0' : '#9a8a68'
+    des.font = '17px VT323, monospace'
+    des.fillText(b.s, b.x + b.w / 2, y + 60)
+    des.textAlign = 'left'
+    des.textBaseline = 'alphabetic'
+}
+
+function desModos() {
+    des.drawImage(pegaImg('assets/home.png'), 0, 0, LARG, ALT)
+    des.fillStyle = 'rgba(8, 5, 2, 0.72)'
+    des.fillRect(0, 0, LARG, ALT)
+    des.textAlign = 'center'
+    des.fillStyle = '#ffd84d'
+    des.font = '22px "Press Start 2P", monospace'
+    des.fillText('ESCOLHA O MODO', LARG / 2, 130)
+    des.textAlign = 'left'
+    desBotaoModo(btnHistoria)
+    desBotaoModo(btnSobrev)
+    desBotaoModo(btnPvp)
+    des.save()
+    des.font = '8px "Press Start 2P", monospace'
+    des.textAlign = 'center'
+    des.fillStyle = '#9a8a68'
+    des.fillText('1 / 2 / 3 ESCOLHEM     ESC VOLTA', LARG / 2, ALT - 26)
     des.textAlign = 'left'
     des.restore()
 }

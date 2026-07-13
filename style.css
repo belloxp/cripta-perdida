@@ -12,9 +12,10 @@ body {
 }
 
 canvas {
-    /* preenche a tela mantendo a proporção 3:2 (letterbox nas laterais/topo) */
-    width: min(100vw, 150vh);
-    height: min(66.6667vw, 100vh);
+    /* cobre a tela inteira sem borda preta (o excesso é cortado, igual ao jogo base) */
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
     background: #000;
     display: block;
 }
