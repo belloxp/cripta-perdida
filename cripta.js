@@ -44,8 +44,10 @@ _cv.addEventListener('mousemove', (ev) => {
     let r = _cv.getBoundingClientRect()
     mouseX = (ev.clientX - r.left) / r.width * LARG
     mouseY = (ev.clientY - r.top) / r.height * ALT
-    let emCima = estado === 'HOME' &&
-        (dentroDe(mouseX, mouseY, btnJogar) || dentroDe(mouseX, mouseY, btnManual) || dentroDe(mouseX, mouseY, btnSobre))
+    let emCima = (estado === 'HOME' &&
+        (dentroDe(mouseX, mouseY, btnJogar) || dentroDe(mouseX, mouseY, btnManual) || dentroDe(mouseX, mouseY, btnSobre))) ||
+        (estado === 'MODOS' &&
+        (dentroDe(mouseX, mouseY, btnHistoria) || dentroDe(mouseX, mouseY, btnSobrev) || dentroDe(mouseX, mouseY, btnPvp)))
     _cv.style.cursor = emCima ? 'pointer' : 'default'
 })
 _cv.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1 })
@@ -56,9 +58,13 @@ _cv.addEventListener('click', (ev) => {
     let mx = (ev.clientX - r.left) / r.width * LARG
     let my = (ev.clientY - r.top) / r.height * ALT
     if (estado === 'HOME') {
-        if (dentroDe(mx, my, btnJogar)) { tocaSom(SONS.click); avancaFluxo() }
+        if (dentroDe(mx, my, btnJogar)) { tocaSom(SONS.click); estado = 'MODOS' }
         else if (dentroDe(mx, my, btnManual)) { tocaSom(SONS.click); abreManual() }
         else if (dentroDe(mx, my, btnSobre)) { tocaSom(SONS.click); abreSobre() }
+    } else if (estado === 'MODOS') {
+        if (dentroDe(mx, my, btnHistoria)) { tocaSom(SONS.click); avancaFluxo() }
+        else if (dentroDe(mx, my, btnSobrev)) { tocaSom(SONS.click); iniciaSobrevivencia() }
+        else if (dentroDe(mx, my, btnPvp)) { tocaSom(SONS.click); iniciaPvp() }
     }
 })
 
@@ -92,7 +98,7 @@ let piscaTimer = 0
 
 function avancaFluxo() {
     paraMusicaBoss()
-    if (estado === 'HOME') tocaFaixa('jogo') // saiu do menu: intro → trilha das fases
+    if (estado === 'HOME' || estado === 'MODOS') tocaFaixa('jogo') // saiu do menu: intro → trilha das fases
     fluxoIdx += 1
     if (fluxoIdx >= FLUXO.length) { voltaPraHome(); return }
     let item = FLUXO[fluxoIdx]
@@ -164,13 +170,29 @@ function aoApertar(k) {
         if (overlayAberto()) tocaSom(SONS.click)
         fechaManual()
         fechaSobre()
+        if (estado === 'MODOS') { tocaSom(SONS.click); estado = 'HOME' }
+        else if (estado === 'SOBREVIVE' || estado === 'PVP') { tocaSom(SONS.click); tocaFaixa('menu'); estado = 'MODOS' }
         return
     }
     // com um overlay aberto, o jogo não recebe teclas
     if (overlayAberto()) return
     if (estado === 'HOME' && k === 'Enter') {
         tocaSom(SONS.click)
-        avancaFluxo()
+        estado = 'MODOS'
+        return
+    }
+    if (estado === 'MODOS') {
+        if (k === '1' || k === 'Enter') { tocaSom(SONS.click); avancaFluxo(); return }
+        if (k === '2') { tocaSom(SONS.click); iniciaSobrevivencia(); return }
+        if (k === '3') { tocaSom(SONS.click); iniciaPvp(); return }
+        return
+    }
+    if (estado === 'SOBREVIVE') {
+        if (sobrevivencia.fim && k === 'Enter') { tocaFaixa('menu'); estado = 'MODOS' }
+        return
+    }
+    if (estado === 'PVP') {
+        if (pvp.vencedor > 0 && k === 'Enter') { tocaSom(SONS.click); pvp.init() }
         return
     }
     if (estado === 'HOME' && k === 'm') {
@@ -414,6 +436,20 @@ function desModos() {
     des.fillText('1 / 2 / 3 ESCOLHEM     ESC VOLTA', LARG / 2, ALT - 26)
     des.textAlign = 'left'
     des.restore()
+}
+
+// ---------- entrada nos modos ----------
+function iniciaSobrevivencia() {
+    faseAtualObj = sobrevivencia
+    sobrevivencia.init()
+    tocaFaixa('jogo')
+    estado = 'SOBREVIVE'
+}
+function iniciaPvp() {
+    faseAtualObj = pvp
+    pvp.init()
+    tocaFaixa('jogo')
+    estado = 'PVP'
 }
 
 // ---------- MANUAL e SOBRE NÓS (overlays HTML) ----------
@@ -708,6 +744,23 @@ function main() {
 
     if (estado === 'HOME') {
         desHome()
+    }
+    else if (estado === 'MODOS') {
+        desModos()
+    }
+    else if (estado === 'SOBREVIVE') {
+        sobrevivencia.atual()
+        atualizaEfeitos()
+        sobrevivencia.des()
+        desEfeitos()
+        desHUD()
+    }
+    else if (estado === 'PVP') {
+        pvp.atual()
+        atualizaEfeitos()
+        pvp.des()
+        desEfeitos()
+        desHUD()
     }
     else if (estado === 'CARREGANDO') {
         telaDica.prog = Math.min(100, telaDica.prog + 0.7)
