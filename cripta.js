@@ -44,12 +44,10 @@ _cv.addEventListener('mousemove', (ev) => {
     let r = _cv.getBoundingClientRect()
     mouseX = (ev.clientX - r.left) / r.width * LARG
     mouseY = (ev.clientY - r.top) / r.height * ALT
-    let emCima = (estado === 'HOME' &&
-        (dentroDe(mouseX, mouseY, btnJogar) || dentroDe(mouseX, mouseY, btnManual) || dentroDe(mouseX, mouseY, btnSobre))) ||
-        (estado === 'MODOS' &&
-        [0, 1, 2].some((i) => dentroDe(mouseX, mouseY, modoRect(i))))
-    if (estado === 'MODOS') {
-        [0, 1, 2].forEach((i) => { if (dentroDe(mouseX, mouseY, modoRect(i))) modoSel = i })
+    let emCima = estado === 'HOME' &&
+        MENU_OPCOES.some((o, i) => dentroDe(mouseX, mouseY, menuRect(i)))
+    if (estado === 'HOME') {
+        MENU_OPCOES.forEach((o, i) => { if (dentroDe(mouseX, mouseY, menuRect(i))) menuSel = i })
     }
     _cv.style.cursor = emCima ? 'pointer' : 'default'
 })
@@ -61,12 +59,8 @@ _cv.addEventListener('click', (ev) => {
     let mx = (ev.clientX - r.left) / r.width * LARG
     let my = (ev.clientY - r.top) / r.height * ALT
     if (estado === 'HOME') {
-        if (dentroDe(mx, my, btnJogar)) { tocaSom(SONS.click); estado = 'MODOS' }
-        else if (dentroDe(mx, my, btnManual)) { tocaSom(SONS.click); abreManual() }
-        else if (dentroDe(mx, my, btnSobre)) { tocaSom(SONS.click); abreSobre() }
-    } else if (estado === 'MODOS') {
-        [0, 1, 2].forEach((i) => {
-            if (dentroDe(mx, my, modoRect(i))) { modoSel = i; confirmaModo() }
+        MENU_OPCOES.forEach((o, i) => {
+            if (dentroDe(mx, my, menuRect(i))) { menuSel = i; confirmaMenu() }
         })
     }
 })
@@ -101,7 +95,7 @@ let piscaTimer = 0
 
 function avancaFluxo() {
     paraMusicaBoss()
-    if (estado === 'HOME' || estado === 'MODOS') {
+    if (estado === 'HOME') {
         tocaFaixa('jogo') // saiu do menu: intro → trilha das fases
         faseAtualObj = null // senão a cutscene inicial desenha a última fase jogada no fundo
     }
@@ -177,40 +171,27 @@ function aoApertar(k) {
         if (overlayAberto()) tocaSom(SONS.click)
         fechaManual()
         fechaSobre()
-        if (estado === 'MODOS') { tocaSom(SONS.click); estado = 'HOME' }
-        else if (estado === 'SOBREVIVE' || estado === 'PVP') { tocaSom(SONS.click); tocaFaixa('menu'); faseAtualObj = null; estado = 'MODOS' }
+        if (estado === 'SOBREVIVE' || estado === 'PVP') { tocaSom(SONS.click); tocaFaixa('menu'); faseAtualObj = null; estado = 'HOME' }
         return
     }
     // com um overlay aberto, o jogo não recebe teclas
     if (overlayAberto()) return
-    if (estado === 'HOME' && k === 'Enter') {
-        tocaSom(SONS.click)
-        estado = 'MODOS'
-        return
-    }
-    if (estado === 'MODOS') {
-        if (k === 'ArrowUp' || k === 'w') { tocaSom(SONS.click); modoSel = (modoSel + 2) % 3 }
-        if (k === 'ArrowDown' || k === 's') { tocaSom(SONS.click); modoSel = (modoSel + 1) % 3 }
-        if (k === '1' || k === '2' || k === '3') { modoSel = Number(k) - 1; confirmaModo() }
-        if (k === 'Enter') confirmaModo()
+    if (estado === 'HOME') {
+        let n = MENU_OPCOES.length
+        if (k === 'ArrowUp' || k === 'w') { tocaSom(SONS.click); menuSel = (menuSel + n - 1) % n; return }
+        if (k === 'ArrowDown' || k === 's') { tocaSom(SONS.click); menuSel = (menuSel + 1) % n; return }
+        if (k === 'Enter') { confirmaMenu(); return }
+        if (k >= '1' && k <= String(n)) { menuSel = Number(k) - 1; confirmaMenu(); return }
+        if (k === 'm') { tocaSom(SONS.click); abreManual(); return }
+        if (k === 'n') { tocaSom(SONS.click); abreSobre(); return }
         return
     }
     if (estado === 'SOBREVIVE') {
-        if (sobrevivencia.fim && k === 'Enter') { tocaFaixa('menu'); faseAtualObj = null; estado = 'MODOS' }
+        if (sobrevivencia.fim && k === 'Enter') { tocaFaixa('menu'); faseAtualObj = null; estado = 'HOME' }
         return
     }
     if (estado === 'PVP') {
         if (pvp.vencedor > 0 && k === 'Enter') { tocaSom(SONS.click); pvp.init() }
-        return
-    }
-    if (estado === 'HOME' && k === 'm') {
-        tocaSom(SONS.click)
-        abreManual()
-        return
-    }
-    if (estado === 'HOME' && k === 'n') {
-        tocaSom(SONS.click)
-        abreSobre()
         return
     }
     if (estado === 'CARREGANDO' && k === 'Enter' && telaDica.prog >= 100) {
@@ -286,154 +267,73 @@ function desPainelPlayer(pl, x, nome, cor, invertido) {
 // ============================================================
 //  TELA INICIAL
 // ============================================================
-// ---------- botões da tela inicial ----------
-// abaixo do sol da arte (o sol termina por volta de y=390) e acima do rodapé
-const btnJogar = { x: LARG / 2 - 118, y: 404, w: 236, h: 50 }
-const btnManual = { x: LARG / 2 - 118, y: 462, w: 236, h: 40 }
-const btnSobre = { x: LARG / 2 - 118, y: 510, w: 236, h: 40 }
-
-// ---------- opções da tela de modos (lista, navegação por setas/mouse) ----------
-const MODOS_OPCOES = [
-    { t: 'MODO HISTORIA', s: 'As dez pragas — cooperativo' },
-    { t: 'SOBREVIVENCIA', s: 'Ondas infinitas, cada vez mais difícil' },
-    { t: '1 VS 1', s: 'Duelo entre os dois jogadores' }
+// ---------- menu principal (lista à esquerda, com a arte respirando à direita) ----------
+const MENU_OPCOES = [
+    { t: 'MODO HISTORIA', acao: () => avancaFluxo() },
+    { t: 'SOBREVIVENCIA', acao: () => iniciaSobrevivencia() },
+    { t: '1 VS 1', acao: () => iniciaPvp() },
+    { t: 'MANUAL', acao: () => abreManual() },
+    { t: 'EQUIPE', acao: () => abreSobre() }
 ]
-let modoSel = 0
-// área clicável de cada opção
-function modoRect(i) {
-    return { x: LARG / 2 - 230, y: 218 + i * 92, w: 460, h: 64 }
+let menuSel = 0
+const MENU_X = 64
+// os 3 modos formam um grupo; manual/equipe descem um respiro (estilo menu de console)
+function menuY(i) {
+    return 268 + i * 46 + (i >= 3 ? 28 : 0)
+}
+function menuRect(i) {
+    return { x: MENU_X - 30, y: menuY(i) - 26, w: 340, h: 40 }
 }
 
 function dentroDe(mx, my, b) {
     return mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h
 }
 
-// caminho de retângulo com cantos cortados (a forma das placas/estelas egípcias)
-function caminhoChanfrado(x, y, w, h, c) {
-    des.beginPath()
-    des.moveTo(x + c, y)
-    des.lineTo(x + w - c, y)
-    des.lineTo(x + w, y + c)
-    des.lineTo(x + w, y + h - c)
-    des.lineTo(x + w - c, y + h)
-    des.lineTo(x + c, y + h)
-    des.lineTo(x, y + h - c)
-    des.lineTo(x, y + c)
-    des.closePath()
-}
-
-// estela de basalto: cantos chanfrados, filete dourado e texto em pixel font
-function desBotao(b, txt, tam) {
-    let f = tam || 15
-    let hover = dentroDe(mouseX, mouseY, b)
-    let y = b.y + (hover ? 2 : 0)
-    let c = 10                       // tamanho do chanfro
-
-    // sombra
-    des.save()
-    des.shadowColor = 'rgba(0,0,0,0.6)'
-    des.shadowBlur = 10
-    des.shadowOffsetY = 4
-    caminhoChanfrado(b.x, y, b.w, b.h, c)
-    let g = des.createLinearGradient(0, y, 0, y + b.h)
-    g.addColorStop(0, hover ? '#33210f' : '#1e1409')
-    g.addColorStop(1, hover ? '#1d1207' : '#0f0904')
-    des.fillStyle = g
-    des.fill()
-    des.restore()
-
-    // contorno externo escuro
-    caminhoChanfrado(b.x, y, b.w, b.h, c)
-    des.strokeStyle = '#0b0704'
-    des.lineWidth = 3
-    des.stroke()
-
-    // filete dourado escavado por dentro
-    caminhoChanfrado(b.x + 5, y + 5, b.w - 10, b.h - 10, c - 4)
-    des.strokeStyle = hover ? '#ffe9a0' : '#a8802e'
-    des.lineWidth = hover ? 2 : 1
-    des.stroke()
-
-    // texto em pixel font, dourado com contorno (igual ao logotipo)
-    des.save()
-    if (hover) { des.shadowColor = '#ffd84d'; des.shadowBlur = 12 }
-    des.font = f + 'px "Press Start 2P", monospace'
-    des.textAlign = 'center'
-    des.textBaseline = 'middle'
-    des.lineWidth = 4
-    des.strokeStyle = '#2a1806'
-    des.strokeText(txt, b.x + b.w / 2, y + b.h / 2 + 1)
-    des.fillStyle = hover ? '#fff0a8' : '#ffd84d'
-    des.fillText(txt, b.x + b.w / 2, y + b.h / 2 + 1)
-    des.restore()
-    des.textAlign = 'left'
-    des.textBaseline = 'alphabetic'
-
-    // marcadores de seleção nas laterais quando o mouse está em cima
-    if (hover) {
-        des.fillStyle = '#ffd84d'
-        des.font = '12px "Press Start 2P", monospace'
-        des.textBaseline = 'middle'
-        des.fillText('▶', b.x - 20, y + b.h / 2)
-        des.fillText('◀', b.x + b.w + 8, y + b.h / 2)
-        des.textBaseline = 'alphabetic'
-    }
-}
-
 function desHome() {
-    des.drawImage(pegaImg('assets/home.png'), 0, 0, LARG, ALT)
-    // a Press Start 2P não tem glifos acentuados (o "Ó" cai no fallback e desalinha),
-    // por isso os rótulos dos botões são sem acento
-    desBotao(btnJogar, 'JOGAR', 18)
-    desBotao(btnManual, 'MANUAL', 12)
-    desBotao(btnSobre, 'EQUIPE', 12)
-
-    // dica de teclas, discreta, sobre a areia
-    des.save()
-    des.font = '8px "Press Start 2P", monospace'
-    des.textAlign = 'center'
-    des.lineWidth = 3
-    des.strokeStyle = 'rgba(0,0,0,0.75)'
-    des.strokeText('ENTER  JOGAR     M  MANUAL     N  EQUIPE', LARG / 2, ALT - 22)
-    des.fillStyle = '#e8c98a'
-    des.fillText('ENTER  JOGAR     M  MANUAL     N  EQUIPE', LARG / 2, ALT - 22)
-    des.textAlign = 'left'
-    des.restore()
-}
-
-function desModos() {
-    des.drawImage(pegaImg('assets/home.png'), 0, 0, LARG, ALT)
-    des.fillStyle = 'rgba(8, 5, 2, 0.82)'
+    // arte dedicada do menu (assets/menuFundo.png); cai pro home.png enquanto não existir
+    let fundo = pegaImg('assets/menuFundo.png')
+    let temFundoNovo = fundo.complete && fundo.naturalWidth > 0
+    des.drawImage(temFundoNovo ? fundo : pegaImg('assets/home.png'), 0, 0, LARG, ALT)
+    // véu de leitura: escuro na esquerda, transparente na direita (a arte aparece)
+    let g = des.createLinearGradient(0, 0, LARG * 0.6, 0)
+    g.addColorStop(0, 'rgba(5, 3, 1, 0.88)')
+    g.addColorStop(1, 'rgba(5, 3, 1, 0)')
+    des.fillStyle = g
     des.fillRect(0, 0, LARG, ALT)
 
-    des.textAlign = 'center'
-    MODOS_OPCOES.forEach((o, i) => {
-        let r = modoRect(i)
-        let sel = modoSel === i
-        let y = r.y + 30
-        des.font = '16px "Press Start 2P", monospace'
-        des.fillStyle = sel ? '#ffd84d' : '#a89468'
-        des.fillText(o.t, LARG / 2, y)
-        if (sel) {
-            des.fillText('►', LARG / 2 - des.measureText(o.t).width / 2 - 34, y)
-            des.fillStyle = '#d9c9a0'
-            des.font = '19px VT323, monospace'
-            des.fillText(o.s, LARG / 2, y + 28)
-        }
+    // logo no topo esquerdo (assets/icon.png); sem ela, o nome em pixel font
+    let logo = pegaImg('assets/icon.png')
+    des.textAlign = 'left'
+    if (logo.complete && logo.naturalWidth > 0) {
+        let lh = 120
+        des.drawImage(logo, MENU_X - 6, 52, lh * logo.naturalWidth / logo.naturalHeight, lh)
+    } else if (temFundoNovo) {
+        // sem logo mas com a arte nova (que não tem título): nome em pixel font segura a onda
+        des.fillStyle = '#ffd84d'
+        des.font = '26px "Press Start 2P", monospace'
+        des.fillText('A CRIPTA', MENU_X, 104)
+        des.fillText('PERDIDA', MENU_X, 144)
+    }
+
+    MENU_OPCOES.forEach((o, i) => {
+        let sel = menuSel === i
+        let y = menuY(i)
+        des.font = (sel ? '15px' : '12px') + ' "Press Start 2P", monospace'
+        des.fillStyle = sel ? '#ffd84d' : '#a08c62'
+        if (sel) des.fillText('►', MENU_X - 28, y)
+        des.fillText(o.t, MENU_X, y)
     })
 
     des.font = '8px "Press Start 2P", monospace'
-    des.fillStyle = '#9a8a68'
-    des.fillText('SETAS ESCOLHEM    ENTER CONFIRMA    ESC VOLTA', LARG / 2, ALT - 26)
+    des.fillStyle = '#8a7a58'
+    des.fillText('SETAS ESCOLHEM    ENTER CONFIRMA', MENU_X, ALT - 28)
     des.textAlign = 'left'
 }
 
-// ---------- entrada nos modos ----------
-function confirmaModo() {
+// ---------- entrada nos modos ----------// ---------- entrada nos modos ----------
+function confirmaMenu() {
     tocaSom(SONS.click)
-    if (modoSel === 0) avancaFluxo()
-    else if (modoSel === 1) iniciaSobrevivencia()
-    else iniciaPvp()
+    MENU_OPCOES[menuSel].acao()
 }
 function iniciaSobrevivencia() {
     faseAtualObj = sobrevivencia
@@ -740,9 +640,6 @@ function main() {
 
     if (estado === 'HOME') {
         desHome()
-    }
-    else if (estado === 'MODOS') {
-        desModos()
     }
     else if (estado === 'SOBREVIVE') {
         sobrevivencia.atual()
