@@ -259,7 +259,8 @@ class Player extends Obj {
     // modo: 'cima' (fases de chuva de inimigos / boss) ou 'lado' (labirinto)
     atira(grupo, modo) {
         if (!this.vivo || this.cooldown > 0) return
-        this.cooldown = 18
+        // duelo pede ritmo de faroeste; nas fases de horda o tiro flui mais
+        this.cooldown = (typeof estado !== 'undefined' && estado === 'PVP') ? 45 : 22
         this.tiroTimer = 14
         if (modo === 'cima') {
             grupo.push(new Tiro(this.x + this.w / 2 - 4, this.y - 6, 8, 16, '#ffd84d', 0, -10, this.forca, this))

@@ -229,11 +229,26 @@ let sobrevivencia = {
 // ============================================================
 let pvp = {
     nome: 'DUELO 1V1',
+    nomes: ['PLAYER 1', 'PLAYER 2'],
+    entrada: -1,   // 0/1 = qual jogador está digitando o nome | -1 = lutando
+    digitado: '',
+    tAnim: 0,
+    fimPlacar: 0,  // frames da telinha de placar final antes de voltar pro menu
     placar: [0, 0],
     vencedor: 0, // 0 = lutando
     grupoTiros: [],
 
+    // entrada pelo menu: zera o placar e pede os nomes
     init() {
+        this.placar = [0, 0]
+        this.nomes = ['PLAYER 1', 'PLAYER 2']
+        this.entrada = 0
+        this.digitado = ''
+        this.resetLuta()
+    },
+
+    // revanche: mantém nomes e placar
+    resetLuta() {
         this.vencedor = 0
         this.grupoTiros = []
         players.forEach((pl) => {
@@ -242,13 +257,39 @@ let pvp = {
             pl.invul = 0
             pl.tiroTimer = 0
             pl.cooldown = 0
+            pl.vel = 4
         })
         p1.x = 90;          p1.y = ARENA_TOPO + 80; p1.facing = 'dir'
         p2.x = LARG - 136;  p2.y = ARENA_TOPO + 80; p2.facing = 'esq'
     },
 
+    confirmaNome() {
+        let nome = this.digitado.trim().toUpperCase()
+        if (nome) this.nomes[this.entrada] = nome
+        this.digitado = ''
+        this.entrada = this.entrada === 0 ? 1 : -1
+    },
+
+    // digitação dos nomes (chamada pelo aoApertar)
+    tecla(k) {
+        if (k === 'Enter') { tocaSom(SONS.click); this.confirmaNome(); return }
+        if (k === 'Backspace') { this.digitado = this.digitado.slice(0, -1); return }
+        if (k.length === 1 && this.digitado.length < 10 && /[a-z0-9 ]/i.test(k)) this.digitado += k.toUpperCase()
+    },
+
     atual() {
-        if (this.vencedor > 0) return
+        // telinha de despedida: mostra o placar final e fecha sozinha
+        if (this.fimPlacar > 0) {
+            this.fimPlacar -= 1
+            if (this.fimPlacar <= 0) {
+                tocaFaixa('menu')
+                faseAtualObj = null
+                fechaMenu()
+                estado = 'HOME'
+            }
+            return
+        }
+        if (this.entrada >= 0 || this.vencedor > 0) return
         let area = { x: 10, y: ARENA_TOPO, w: LARG - 20, h: ARENA_BASE - ARENA_TOPO + 8, vert: true }
         players.forEach((pl) => {
             pl.atualizaTimers()
@@ -264,6 +305,7 @@ let pvp = {
                 let pl = players[j]
                 if (pl !== tiro.dono && pl.vivo && tiro.colid(pl)) {
                     pl.levaDano(1)
+                    pl.invul = 22 // invul curta no duelo: cada tiro espaçado conta
                     this.grupoTiros.splice(i, 1)
                     break
                 }
@@ -275,22 +317,55 @@ let pvp = {
     },
 
     des() {
-        // arena própria (assets/arenaPvp.png); enquanto não existir, usa o salão da fase 1
-        let arena = pegaImg('assets/arenaPvp.png')
-        if (arena.complete && arena.naturalWidth > 0) des.drawImage(arena, 0, 0, LARG, ALT)
-        else desFundo(1)
+        des.drawImage(pegaImg('assets/arenaPvp.png'), 0, 0, LARG, ALT)
         this.grupoTiros.forEach((t) => { t.des_tiro() })
         players.forEach((pl) => { pl.des_obj() })
 
         let t = new Texto()
-        t.des_text('DUELO   ' + this.placar[0] + '  x  ' + this.placar[1], LARG / 2, 88, '#f3e9d2', 'bold 18px monospace', 'center')
+        this.tAnim += 1
+
+        // placar final antes de sair
+        if (this.fimPlacar > 0) {
+            des.fillStyle = 'rgba(8, 4, 2, 0.85)'
+            des.fillRect(0, 0, LARG, ALT)
+            t.des_text('PLACAR FINAL', LARG / 2, 200, '#ffd84d', 'bold 32px monospace', 'center')
+            t.des_text(this.nomes[0], LARG / 2 - 90, 280, '#3aa0ff', 'bold 22px monospace', 'center')
+            t.des_text(this.nomes[1], LARG / 2 + 90, 280, '#37d67a', 'bold 22px monospace', 'center')
+            t.des_text(this.placar[0] + '   x   ' + this.placar[1], LARG / 2, 330, '#f3e9d2', 'bold 40px monospace', 'center')
+            let msg = this.placar[0] === this.placar[1] ? 'EMPATE NA SÉRIE!'
+                : 'MELHOR DA SÉRIE: ' + this.nomes[this.placar[0] > this.placar[1] ? 0 : 1]
+            t.des_text(msg, LARG / 2, 386, '#c4943a', 'bold 16px monospace', 'center')
+            t.des_text('voltando ao menu...', LARG / 2, 440, '#8a7a58', '13px monospace', 'center')
+            return
+        }
+
+        // telinha de escolha de nomes
+        if (this.entrada >= 0) {
+            des.fillStyle = 'rgba(8, 4, 2, 0.78)'
+            des.fillRect(0, 0, LARG, ALT)
+            let cor = this.entrada === 0 ? '#3aa0ff' : '#37d67a'
+            t.des_text('DUELO 1V1', LARG / 2, 190, '#ffd84d', 'bold 30px monospace', 'center')
+            t.des_text('JOGADOR ' + (this.entrada + 1) + ' — digite seu nome:', LARG / 2, 260, cor, 'bold 18px monospace', 'center')
+            let cursor = Math.floor(this.tAnim / 24) % 2 === 0 ? '_' : ' '
+            t.des_text((this.digitado || '') + cursor, LARG / 2, 320, '#f3e9d2', 'bold 34px monospace', 'center')
+            t.des_text('ENTER confirma   (até 10 letras — vazio usa PLAYER ' + (this.entrada + 1) + ')', LARG / 2, 380, '#8a7a58', '13px monospace', 'center')
+            return
+        }
+
+        // placar nas laterais, logo abaixo da HUD (o centro fica livre pro letreiro da arena)
+        let v1 = '◆'.repeat(Math.min(5, this.placar[0])) + (this.placar[0] > 5 ? ' +' + (this.placar[0] - 5) : '')
+        let v2 = '◆'.repeat(Math.min(5, this.placar[1])) + (this.placar[1] > 5 ? ' +' + (this.placar[1] - 5) : '')
+        t.des_text(this.nomes[0], 14, 84, '#3aa0ff', 'bold 14px monospace')
+        t.des_text(v1 || '—', 14, 104, '#ffd84d', '14px monospace')
+        t.des_text(this.nomes[1], LARG - 14, 84, '#37d67a', 'bold 14px monospace', 'right')
+        t.des_text(v2 || '—', LARG - 14, 104, '#ffd84d', '14px monospace', 'right')
 
         if (this.vencedor > 0) {
             des.fillStyle = 'rgba(10, 4, 4, 0.82)'
             des.fillRect(0, 0, LARG, ALT)
             let cor = this.vencedor === 1 ? '#3aa0ff' : '#37d67a'
-            t.des_text('PLAYER ' + this.vencedor + ' VENCEU!', LARG / 2, ALT / 2 - 30, cor, 'bold 38px monospace', 'center')
-            t.des_text(this.placar[0] + '  x  ' + this.placar[1], LARG / 2, ALT / 2 + 14, '#ffd84d', 'bold 26px monospace', 'center')
+            t.des_text(this.nomes[this.vencedor - 1] + ' VENCEU!', LARG / 2, ALT / 2 - 30, cor, 'bold 38px monospace', 'center')
+            t.des_text(this.nomes[0] + '  ' + this.placar[0] + '  x  ' + this.placar[1] + '  ' + this.nomes[1], LARG / 2, ALT / 2 + 14, '#ffd84d', 'bold 22px monospace', 'center')
             t.des_text('ENTER revanche   |   ESC menu', LARG / 2, ALT / 2 + 54, '#c4943a', '14px monospace', 'center')
         }
     }
