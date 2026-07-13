@@ -165,7 +165,7 @@ function aoApertar(k) {
         reiniciaFase()
         return
     }
-    if (estado === 'FINAL' && k === 'Enter' && cenaFinal.t > 300) {
+    if (estado === 'FINAL' && k === 'Enter' && cenaFinal.creditosAcabaram()) {
         voltaPraHome()
         return
     }
@@ -310,6 +310,10 @@ function desGameOver() {
     }
 }
 
+// ============================================================
+//  CENA FINAL — camelo ao pôr do sol + créditos subindo
+//  (cena desenhada em código; substituível por assets depois)
+// ============================================================
 let cenaFinal = {
     t: 0,
     creditos: [
@@ -318,14 +322,20 @@ let cenaFinal = {
         'As 10 pragas foram seladas.',
         'O mundo segue em paz... por enquanto.',
         '',
-        '— HISTÓRIA & GAME DESIGN —',
-        'Bello & Equipe',
+        '\u2014 PROGRAMA\u00C7\u00C3O \u2014',
+        'Bello, Rafael, Mario e Rech',
         '',
-        '— PROGRAMAÇÃO —',
-        'VAI Tecnologia',
+        '\u2014 IMAGENS \u2014',
+        'Bello',
         '',
-        '— ARTE & SPRITES —',
-        '(em produção)',
+        '\u2014 M\u00DASICAS (AUTORAIS) \u2014',
+        'Mario',
+        '',
+        '\u2014 PROFESSOR ORIENTADOR \u2014',
+        'Carlos Roberto',
+        '',
+        '\u2014 ESCOLA \u2014',
+        'SESI SENAI \u2014 Tijucas',
         '',
         'Obrigado por jogar!',
         '',
@@ -337,7 +347,22 @@ let cenaFinal = {
     atual() {
         this.t += 1
     },
+    // true quando o último crédito já saiu por cima da tela
+    creditosAcabaram() {
+        return ALT + 80 - this.t * 0.55 + (this.creditos.length - 1) * 36 < -20
+    },
     des() {
+        // arte final pronta (assets/cenaFinal.png) — desenhada por cima do fallback
+        let arte = pegaImg('assets/cenaFinal.png')
+        if (arte.complete && arte.naturalWidth > 0) {
+            // zoom bem lento enquanto os créditos passam (efeito Ken Burns)
+            let z = Math.min(1.15, 1 + this.t * 0.00009)
+            let dw = LARG * z, dh = ALT * z
+            des.drawImage(arte, (LARG - dw) / 2, (ALT - dh) / 2, dw, dh)
+            this.desCreditos()
+            return
+        }
+        // céu do pôr do sol
         let grad = des.createLinearGradient(0, 0, 0, ALT)
         grad.addColorStop(0, '#2a1a4a')
         grad.addColorStop(0.45, '#c4502a')
@@ -346,11 +371,13 @@ let cenaFinal = {
         des.fillStyle = grad
         des.fillRect(0, 0, LARG, ALT)
 
+        // sol
         des.fillStyle = '#ffdf8a'
         des.beginPath()
         des.arc(LARG / 2, ALT * 0.62, 70, 0, Math.PI * 2)
         des.fill()
 
+        // pirâmides no horizonte
         des.fillStyle = '#7a4a22'
         des.beginPath()
         des.moveTo(140, ALT * 0.72); des.lineTo(330, ALT * 0.40); des.lineTo(520, ALT * 0.72)
@@ -360,6 +387,7 @@ let cenaFinal = {
         des.moveTo(480, ALT * 0.72); des.lineTo(640, ALT * 0.48); des.lineTo(800, ALT * 0.72)
         des.closePath(); des.fill()
 
+        // areia
         des.fillStyle = '#caa05a'
         des.fillRect(0, ALT * 0.72, LARG, ALT * 0.28)
         des.fillStyle = '#b8904e'
@@ -367,45 +395,64 @@ let cenaFinal = {
         des.ellipse(LARG * 0.3, ALT * 0.85, 260, 30, 0, 0, Math.PI * 2)
         des.fill()
 
+        this.desCamelo()
+        this.desCreditos()
+    },
+    desCamelo() {
         let camX = Math.min(LARG - 220, -80 + this.t * 0.55)
+
+        // arte pronta (assets/camelo_sheet.png, 2 quadros)
+        let img = pegaImg('assets/camelo_sheet.png')
+        if (img.complete && img.naturalWidth > 0) {
+            let quadro = Math.floor(this.t / 12) % 2
+            let dh = 130, dw = dh * (img.naturalWidth / 2) / img.naturalHeight
+            desSprite('assets/camelo_sheet.png', 2, quadro, camX, ALT * 0.70, dw, dh)
+            return
+        }
+
+        // fallback: camelo com os dois amigos se afastando (silhueta)
         let camY = ALT * 0.74
         des.fillStyle = '#2a1a0c'
-        des.fillRect(camX, camY, 90, 34)
-        des.beginPath()
+        des.fillRect(camX, camY, 90, 34)                 // corpo
+        des.beginPath()                                   // corcovas
         des.arc(camX + 28, camY, 16, Math.PI, 0)
         des.arc(camX + 62, camY, 16, Math.PI, 0)
         des.fill()
-        des.fillRect(camX + 82, camY - 18, 10, 26)
-        des.fillRect(camX + 80, camY - 28, 18, 12)
+        des.fillRect(camX + 82, camY - 18, 10, 26)       // pescoço
+        des.fillRect(camX + 80, camY - 28, 18, 12)       // cabeça
         let passo = Math.sin(this.t / 8) * 4
-        des.fillRect(camX + 10, camY + 32, 7, 26 + passo)
+        des.fillRect(camX + 10, camY + 32, 7, 26 + passo) // pernas
         des.fillRect(camX + 34, camY + 32, 7, 26 - passo)
         des.fillRect(camX + 56, camY + 32, 7, 26 + passo)
         des.fillRect(camX + 78, camY + 32, 7, 26 - passo)
+        // os 2 amigos montados
         des.fillStyle = '#3aa0ff'
         des.fillRect(camX + 18, camY - 22, 14, 20)
         des.fillStyle = '#37d67a'
         des.fillRect(camX + 50, camY - 22, 14, 20)
-
+    },
+    desCreditos() {
+        // créditos subindo
         let baseY = ALT + 80 - this.t * 0.55
         des.textAlign = 'center'
         this.creditos.forEach((linha, i) => {
             let y = baseY + i * 36
             if (y > -20 && y < ALT + 30) {
                 des.fillStyle = i === 0 ? '#ffd84d' : '#fff6e0'
-                des.font = i === 0 ? 'bold 34px serif' : (linha.indexOf('—') === 0 ? 'bold 16px monospace' : '17px monospace')
+                des.font = i === 0 ? '26px "Press Start 2P", monospace'
+                    : (linha.indexOf('\u2014') === 0 ? '13px "Press Start 2P", monospace' : '24px VT323, monospace')
                 des.fillText(linha, LARG / 2, y)
             }
         })
         des.textAlign = 'left'
 
-        if (this.t > 300) {
+        if (this.creditosAcabaram()) {
             piscaTimer += 1
             if (Math.floor(piscaTimer / 35) % 2 === 0) {
                 des.fillStyle = '#fff6e0'
-                des.font = '14px monospace'
+                des.font = '10px "Press Start 2P", monospace'
                 des.textAlign = 'center'
-                des.fillText('ENTER para voltar ao início', LARG / 2, ALT - 20)
+                des.fillText('ENTER para voltar ao in\u00EDcio', LARG / 2, ALT - 20)
                 des.textAlign = 'left'
             }
         }
