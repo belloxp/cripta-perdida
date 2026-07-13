@@ -3,6 +3,8 @@
 //  Sistema de cut-scenes com falas entre os personagens
 //  (rosto + nome + texto com efeito de máquina de escrever)
 // ============================================================
+
+// Nomes exibidos nas caixas de diálogo — fácil de trocar aqui
 const NOMES = {
     p1: 'PLAYER 1',
     p2: 'PLAYER 2',
@@ -76,4 +78,80 @@ const ROTEIRO = {
 
 // ------------------------------------------------------------
 //  CENA DE DIÁLOGO
+//  ENTER avança (completa a frase, depois passa pra próxima)
 // ------------------------------------------------------------
+class CenaDialogo {
+    constructor(falas) {
+        this.falas = falas
+        this.idx = 0
+        this.chars = 0
+        this.terminou = false
+    }
+
+    falaAtual() {
+        return this.falas[this.idx]
+    }
+
+    atual() {
+        if (this.terminou) return
+        let fala = this.falaAtual()
+        if (this.chars < fala.txt.length) {
+            this.chars += 0.7 // velocidade da máquina de escrever
+        }
+    }
+
+    avancar() {
+        if (this.terminou) return
+        let fala = this.falaAtual()
+        if (this.chars < fala.txt.length) {
+            this.chars = fala.txt.length // completa a frase
+        } else {
+            this.idx += 1
+            this.chars = 0
+            if (this.idx >= this.falas.length) {
+                this.terminou = true
+            }
+        }
+    }
+
+    des() {
+        // fundo escurecido
+        des.fillStyle = 'rgba(0,0,0,0.55)'
+        des.fillRect(0, 0, LARG, ALT)
+
+        if (this.terminou) return
+        let fala = this.falaAtual()
+
+        // caixa de diálogo
+        let cx = 60, cy = ALT - 190, cw = LARG - 120, ch = 150
+        des.fillStyle = 'rgba(20, 14, 8, 0.95)'
+        des.fillRect(cx, cy, cw, ch)
+        des.strokeStyle = CORES_FALA[fala.quem] || '#c4943a'
+        des.lineWidth = 3
+        des.strokeRect(cx, cy, cw, ch)
+
+        // rosto do personagem
+        des.drawImage(pegaImg(ROSTOS[fala.quem]), cx + 14, cy + 14, 110, 110)
+
+        // nome
+        des.fillStyle = CORES_FALA[fala.quem] || '#ffe9b0'
+        des.font = 'bold 18px monospace'
+        des.fillText(NOMES[fala.quem] || '???', cx + 140, cy + 32)
+
+        // texto digitando
+        let visivel = fala.txt.slice(0, Math.floor(this.chars))
+        let linhas = quebraTexto(visivel, cw - 170, '17px monospace')
+        des.fillStyle = '#f3e9d2'
+        des.font = '17px monospace'
+        linhas.forEach((l, i) => {
+            des.fillText(l, cx + 140, cy + 62 + i * 24)
+        })
+
+        // dica de avançar
+        des.fillStyle = '#c4943a'
+        des.font = '13px monospace'
+        des.textAlign = 'right'
+        des.fillText('ENTER \u25B6', cx + cw - 14, cy + ch - 12)
+        des.textAlign = 'left'
+    }
+}
