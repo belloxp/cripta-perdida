@@ -44,10 +44,17 @@ _cv.addEventListener('mousemove', (ev) => {
     let r = _cv.getBoundingClientRect()
     mouseX = (ev.clientX - r.left) / r.width * LARG
     mouseY = (ev.clientY - r.top) / r.height * ALT
-    let emCima = estado === 'HOME' &&
-        MENU_OPCOES.some((o, i) => dentroDe(mouseX, mouseY, menuRect(i)))
+    let emCima = false
     if (estado === 'HOME') {
-        MENU_OPCOES.forEach((o, i) => { if (dentroDe(mouseX, mouseY, menuRect(i))) menuSel = i })
+        if (menuConfirma >= 0) {
+            [0, 1].forEach((n) => {
+                if (dentroDe(mouseX, mouseY, confirmaRect(n))) { confirmaSel = n; emCima = true }
+            })
+        } else {
+            menuItens().forEach((it, i) => {
+                if (dentroDe(mouseX, mouseY, menuRect(it))) { menuSel = i; emCima = true }
+            })
+        }
     }
     _cv.style.cursor = emCima ? 'pointer' : 'default'
 })
@@ -59,9 +66,15 @@ _cv.addEventListener('click', (ev) => {
     let mx = (ev.clientX - r.left) / r.width * LARG
     let my = (ev.clientY - r.top) / r.height * ALT
     if (estado === 'HOME') {
-        MENU_OPCOES.forEach((o, i) => {
-            if (dentroDe(mx, my, menuRect(i))) { menuSel = i; confirmaMenu() }
-        })
+        if (menuConfirma >= 0) {
+            [0, 1].forEach((n) => {
+                if (dentroDe(mx, my, confirmaRect(n))) { confirmaSel = n; confirmaModal() }
+            })
+        } else {
+            menuItens().forEach((it, i) => {
+                if (dentroDe(mx, my, menuRect(it))) { menuSel = i; executaItem(i) }
+            })
+        }
     }
 })
 
@@ -152,6 +165,7 @@ function voltaPraHome() {
     estado = 'HOME'
     fluxoIdx = -1
     faseAtualObj = null
+    fechaMenu()
     efeitos = []
     goldenCarlos = 0
     bonusGolden = false
@@ -171,17 +185,23 @@ function aoApertar(k) {
         if (overlayAberto()) tocaSom(SONS.click)
         fechaManual()
         fechaSobre()
-        if (estado === 'SOBREVIVE' || estado === 'PVP') { tocaSom(SONS.click); tocaFaixa('menu'); faseAtualObj = null; estado = 'HOME' }
+        if (estado === 'HOME' && menuConfirma >= 0) { tocaSom(SONS.click); menuConfirma = -1; return }
+        if (estado === 'HOME' && menuAberto) { tocaSom(SONS.click); fechaMenu(); return }
+        if (estado === 'SOBREVIVE' || estado === 'PVP') { tocaSom(SONS.click); tocaFaixa('menu'); faseAtualObj = null; fechaMenu(); estado = 'HOME' }
         return
     }
     // com um overlay aberto, o jogo não recebe teclas
     if (overlayAberto()) return
     if (estado === 'HOME') {
-        let n = MENU_OPCOES.length
+        if (menuConfirma >= 0) {
+            if (['ArrowLeft', 'ArrowRight', 'a', 'd'].includes(k)) { tocaSom(SONS.click); confirmaSel = 1 - confirmaSel; return }
+            if (k === 'Enter') { confirmaModal(); return }
+            return
+        }
+        let n = menuItens().length
         if (k === 'ArrowUp' || k === 'w') { tocaSom(SONS.click); menuSel = (menuSel + n - 1) % n; return }
         if (k === 'ArrowDown' || k === 's') { tocaSom(SONS.click); menuSel = (menuSel + 1) % n; return }
-        if (k === 'Enter') { confirmaMenu(); return }
-        if (k >= '1' && k <= String(n)) { menuSel = Number(k) - 1; confirmaMenu(); return }
+        if (k === 'Enter') { executaItem(menuSel); return }
         if (k === 'm') { tocaSom(SONS.click); abreManual(); return }
         if (k === 'n') { tocaSom(SONS.click); abreSobre(); return }
         return
@@ -267,22 +287,71 @@ function desPainelPlayer(pl, x, nome, cor, invertido) {
 // ============================================================
 //  TELA INICIAL
 // ============================================================
-// ---------- menu principal (lista à esquerda, com a arte respirando à direita) ----------
-const MENU_OPCOES = [
+// ---------- menu principal (JOGAR expande os modos; escolha pede confirmação) ----------
+const MENU_MODOS = [
     { t: 'MODO HISTORIA', acao: () => avancaFluxo() },
     { t: 'SOBREVIVENCIA', acao: () => iniciaSobrevivencia() },
-    { t: '1 VS 1', acao: () => iniciaPvp() },
-    { t: 'MANUAL', acao: () => abreManual() },
-    { t: 'EQUIPE', acao: () => abreSobre() }
+    { t: '1 VS 1', acao: () => iniciaPvp() }
 ]
 let menuSel = 0
+let menuAberto = false   // JOGAR aberto mostrando os modos embaixo
+let menuConfirma = -1    // modo esperando confirmação no modal (-1 = nenhum)
+let confirmaSel = 0      // 0 = SIM | 1 = NAO
 const MENU_X = 64
-// os 3 modos formam um grupo; manual/equipe descem um respiro (estilo menu de console)
-function menuY(i) {
-    return 268 + i * 46 + (i >= 3 ? 28 : 0)
+
+// lista atual do menu (muda quando JOGAR está aberto)
+function menuItens() {
+    let itens = [{ t: 'JOGAR', tipo: 'jogar' }]
+    if (menuAberto) MENU_MODOS.forEach((m, i) => itens.push({ t: m.t, tipo: 'modo', modo: i, sub: true }))
+    itens.push({ t: 'MANUAL', tipo: 'manual' })
+    itens.push({ t: 'EQUIPE', tipo: 'equipe' })
+    let y = 272
+    itens.forEach((it, i) => {
+        if (i > 0 && !it.sub && itens[i - 1].sub) y += 18 // respiro depois do grupo de modos
+        it.y = y
+        y += it.sub ? 40 : 48
+    })
+    return itens
 }
-function menuRect(i) {
-    return { x: MENU_X - 30, y: menuY(i) - 26, w: 340, h: 40 }
+function menuRect(it) {
+    return { x: MENU_X + (it.sub ? 30 : 0) - 24, y: it.y - 26, w: 330, h: 38 }
+}
+function fechaMenu() {
+    menuAberto = false
+    menuConfirma = -1
+    menuSel = 0
+}
+// botões SIM/NAO do modal
+function confirmaRect(n) {
+    return { x: LARG / 2 - 155 + n * 180, y: ALT / 2 + 24, w: 130, h: 44 }
+}
+
+function executaItem(i) {
+    let it = menuItens()[i]
+    if (!it) return
+    tocaSom(SONS.click)
+    if (it.tipo === 'jogar') {
+        menuAberto = !menuAberto
+        if (menuAberto) menuSel = 1
+    } else if (it.tipo === 'modo') {
+        menuConfirma = it.modo
+        confirmaSel = 0
+    } else if (it.tipo === 'manual') {
+        abreManual()
+    } else {
+        abreSobre()
+    }
+}
+
+function confirmaModal() {
+    tocaSom(SONS.click)
+    if (confirmaSel === 0) {
+        let m = MENU_MODOS[menuConfirma]
+        fechaMenu()
+        m.acao()
+    } else {
+        menuConfirma = -1
+    }
 }
 
 function dentroDe(mx, my, b) {
@@ -308,33 +377,61 @@ function desHome() {
         let lh = 120
         des.drawImage(logo, MENU_X - 6, 52, lh * logo.naturalWidth / logo.naturalHeight, lh)
     } else if (temFundoNovo) {
-        // sem logo mas com a arte nova (que não tem título): nome em pixel font segura a onda
         des.fillStyle = '#ffd84d'
         des.font = '26px "Press Start 2P", monospace'
         des.fillText('A CRIPTA', MENU_X, 104)
         des.fillText('PERDIDA', MENU_X, 144)
     }
 
-    MENU_OPCOES.forEach((o, i) => {
-        let sel = menuSel === i
-        let y = menuY(i)
-        des.font = (sel ? '15px' : '12px') + ' "Press Start 2P", monospace'
-        des.fillStyle = sel ? '#ffd84d' : '#a08c62'
-        if (sel) des.fillText('►', MENU_X - 28, y)
-        des.fillText(o.t, MENU_X, y)
+    let itens = menuItens()
+    itens.forEach((it, i) => {
+        let sel = menuSel === i && menuConfirma < 0
+        let x = MENU_X + (it.sub ? 30 : 0)
+        des.font = (sel ? '30px' : '26px') + ' VT323, monospace'
+        des.fillStyle = sel ? '#ffd84d' : (it.sub ? '#9c8c66' : '#b7a67e')
+        if (sel) des.fillText('►', x - 26, it.y)
+        let rotulo = it.tipo === 'jogar' ? (menuAberto ? 'JOGAR ▾' : 'JOGAR') : it.t
+        des.fillText(rotulo, x, it.y)
     })
 
-    des.font = '8px "Press Start 2P", monospace'
+    des.font = '18px VT323, monospace'
     des.fillStyle = '#8a7a58'
-    des.fillText('SETAS ESCOLHEM    ENTER CONFIRMA', MENU_X, ALT - 28)
-    des.textAlign = 'left'
+    des.fillText('SETAS ESCOLHEM   ENTER CONFIRMA', MENU_X, ALT - 28)
+
+    // modal de confirmação
+    if (menuConfirma >= 0) {
+        des.fillStyle = 'rgba(0, 0, 0, 0.62)'
+        des.fillRect(0, 0, LARG, ALT)
+        let bx = LARG / 2 - 220, by = ALT / 2 - 78, bw = 440, bh = 168
+        des.fillStyle = '#171008'
+        des.fillRect(bx, by, bw, bh)
+        des.strokeStyle = '#8a6a33'
+        des.lineWidth = 2
+        des.strokeRect(bx, by, bw, bh)
+        des.textAlign = 'center'
+        des.fillStyle = '#d9c9a0'
+        des.font = '24px VT323, monospace'
+        des.fillText('INICIAR', LARG / 2, by + 44)
+        des.fillStyle = '#ffd84d'
+        des.font = '32px VT323, monospace'
+        des.fillText(MENU_MODOS[menuConfirma].t, LARG / 2, by + 80)
+        ;['SIM', 'NAO'].forEach((txt, n) => {
+            let r = confirmaRect(n)
+            let sel = confirmaSel === n
+            des.fillStyle = sel ? '#33210f' : '#100a04'
+            des.fillRect(r.x, r.y, r.w, r.h)
+            des.strokeStyle = sel ? '#ffd84d' : '#5a4322'
+            des.strokeRect(r.x, r.y, r.w, r.h)
+            des.fillStyle = sel ? '#ffd84d' : '#9c8c66'
+            des.font = '26px VT323, monospace'
+            des.fillText(txt, r.x + r.w / 2, r.y + 30)
+        })
+        des.textAlign = 'left'
+    }
 }
 
-// ---------- entrada nos modos ----------// ---------- entrada nos modos ----------
-function confirmaMenu() {
-    tocaSom(SONS.click)
-    MENU_OPCOES[menuSel].acao()
-}
+// ---------- entrada nos modos ----------// ---------- entrada nos modos ----------// ---------- entrada nos modos ----------
+
 function iniciaSobrevivencia() {
     faseAtualObj = sobrevivencia
     sobrevivencia.init()
