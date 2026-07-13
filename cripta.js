@@ -382,10 +382,10 @@ function desHome() {
     let logo = pegaImg('assets/icon.png')
     des.textAlign = 'left'
     if (logo.complete && logo.naturalWidth > 0) {
-        let lh = 70
+        let lh = 62
         let lw = lh * logo.naturalWidth / logo.naturalHeight
-        if (lw > 200) { lw = 200; lh = lw * logo.naturalHeight / logo.naturalWidth }
-        des.drawImage(logo, 28, 36, lw, lh) // colado no canto, junto do menu
+        if (lw > 180) { lw = 180; lh = lw * logo.naturalHeight / logo.naturalWidth }
+        des.drawImage(logo, 42, 48, lw, lh) // no canto, com um respiro da borda
     } else if (temFundoNovo) {
         des.fillStyle = '#ffd84d'
         des.font = '26px "Press Start 2P", monospace'
