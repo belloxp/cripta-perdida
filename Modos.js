@@ -274,7 +274,10 @@ let pvp = {
     },
 
     des() {
-        desFundo(1)
+        // arena própria (assets/arenaPvp.png); enquanto não existir, usa o salão da fase 1
+        let arena = pegaImg('assets/arenaPvp.png')
+        if (arena.complete && arena.naturalWidth > 0) des.drawImage(arena, 0, 0, LARG, ALT)
+        else desFundo(1)
         this.grupoTiros.forEach((t) => { t.des_tiro() })
         players.forEach((pl) => { pl.des_obj() })
 
