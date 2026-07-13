@@ -143,6 +143,7 @@ function preparaFase(n) {
         pl.invul = 0
         pl.tiroTimer = 0
         pl.cooldown = 0
+        pl.vel = 4 // cada fase parte da velocidade padrão (a 7 reduz no init)
     })
     faseAtualObj.init()
     estado = 'FASE'
@@ -187,7 +188,18 @@ function aoApertar(k) {
         fechaSobre()
         if (estado === 'HOME' && menuConfirma >= 0) { tocaSom(SONS.click); menuConfirma = -1; return }
         if (estado === 'HOME' && menuAberto) { tocaSom(SONS.click); fechaMenu(); return }
-        if (estado === 'SOBREVIVE' || estado === 'PVP') { tocaSom(SONS.click); tocaFaixa('menu'); faseAtualObj = null; fechaMenu(); estado = 'HOME' }
+        if (estado === 'PVP') {
+            tocaSom(SONS.click)
+            if (pvp.entrada >= 0 || pvp.fimPlacar > 0) {
+                // digitando nome ou já no placar final: sai direto
+                pvp.fimPlacar = 0
+                tocaFaixa('menu'); faseAtualObj = null; fechaMenu(); estado = 'HOME'
+            } else {
+                pvp.fimPlacar = 190 // ~3s de placar final antes de fechar
+            }
+            return
+        }
+        if (estado === 'SOBREVIVE') { tocaSom(SONS.click); tocaFaixa('menu'); faseAtualObj = null; fechaMenu(); estado = 'HOME' }
         return
     }
     // com um overlay aberto, o jogo não recebe teclas
@@ -211,7 +223,12 @@ function aoApertar(k) {
         return
     }
     if (estado === 'PVP') {
-        if (pvp.vencedor > 0 && k === 'Enter') { tocaSom(SONS.click); pvp.init() }
+        if (pvp.fimPlacar > 0) {
+            if (k === 'Enter') { pvp.fimPlacar = 1 } // pula a telinha
+            return
+        }
+        if (pvp.entrada >= 0) { pvp.tecla(k); return }
+        if (pvp.vencedor > 0 && k === 'Enter') { tocaSom(SONS.click); pvp.resetLuta() }
         return
     }
     if (estado === 'CARREGANDO' && k === 'Enter' && telaDica.prog >= 100) {
@@ -261,13 +278,15 @@ function desHUD() {
     des.lineWidth = 2
     des.strokeRect(0, 0, LARG, TOPO)
 
-    desPainelPlayer(p1, 8, NOMES.p1, '#3aa0ff', false)
-    desPainelPlayer(p2, LARG - 258, NOMES.p2, '#37d67a', true)
+    let n1 = estado === 'PVP' ? pvp.nomes[0] : NOMES.p1
+    let n2 = estado === 'PVP' ? pvp.nomes[1] : NOMES.p2
+    desPainelPlayer(p1, 8, n1, '#3aa0ff', false)
+    desPainelPlayer(p2, LARG - 258, n2, '#37d67a', true)
 
     // nome da fase no centro
     if (faseAtualObj) {
         txtHud.des_text(faseAtualObj.nome, LARG / 2, 26, '#ffd84d', 'bold 15px monospace', 'center')
-        txtHud.des_text('Pontos: ' + (p1.pts + p2.pts), LARG / 2, 46, '#c4943a', '13px monospace', 'center')
+        if (estado !== 'PVP') txtHud.des_text('Pontos: ' + (p1.pts + p2.pts), LARG / 2, 46, '#c4943a', '13px monospace', 'center')
     }
 }
 
@@ -367,10 +386,7 @@ function dentroDe(mx, my, b) {
 }
 
 function desHome() {
-    // arte dedicada do menu (assets/menuFundo.png); cai pro home.png enquanto não existir
-    let fundo = pegaImg('assets/menuFundo.png')
-    let temFundoNovo = fundo.complete && fundo.naturalWidth > 0
-    des.drawImage(temFundoNovo ? fundo : pegaImg('assets/home.png'), 0, 0, LARG, ALT)
+    des.drawImage(pegaImg('assets/menuFundo.png'), 0, 0, LARG, ALT)
     // véu de leitura: escuro na esquerda, transparente na direita (a arte aparece)
     let g = des.createLinearGradient(0, 0, LARG * 0.6, 0)
     g.addColorStop(0, 'rgba(5, 3, 1, 0.88)')
@@ -378,25 +394,13 @@ function desHome() {
     des.fillStyle = g
     des.fillRect(0, 0, LARG, ALT)
 
-    // logo no topo esquerdo (assets/icon.png); sem ela, o nome em pixel font
+    // logo no topo esquerdo
     let logo = pegaImg('assets/icon.png')
     des.textAlign = 'left'
-    if (logo.complete && logo.naturalWidth > 0) {
-        let lh = 62
-        let lw = lh * logo.naturalWidth / logo.naturalHeight
-        if (lw > 180) { lw = 180; lh = lw * logo.naturalHeight / logo.naturalWidth }
-        des.drawImage(logo, 42, 48, lw, lh) // no canto, com um respiro da borda
-    } else if (temFundoNovo) {
-        des.fillStyle = '#ffd84d'
-        des.font = '26px "Press Start 2P", monospace'
-        des.fillText('A CRIPTA', MENU_X, 104)
-        des.fillText('PERDIDA', MENU_X, 144)
-    }
-
-    // easing da abertura do JOGAR
-    let alvoAnim = menuAberto ? 1 : 0
-    menuAnim += (alvoAnim - menuAnim) * 0.22
-    if (Math.abs(alvoAnim - menuAnim) < 0.01) menuAnim = alvoAnim
+    let lh = 62
+    let lw = lh * logo.naturalWidth / (logo.naturalHeight || 1)
+    if (lw > 180) { lw = 180; lh = lw * logo.naturalHeight / logo.naturalWidth }
+    des.drawImage(logo, 42, 72, lw, lh)
 
     let itens = menuItens()
     itens.forEach((it, i) => {
@@ -579,84 +583,11 @@ let cenaFinal = {
         return ALT + 80 - this.t * 0.55 + (this.creditos.length - 1) * 36 < -20
     },
     des() {
-        // arte final pronta (assets/cenaFinal.png) — desenhada por cima do fallback
-        let arte = pegaImg('assets/cenaFinal.png')
-        if (arte.complete && arte.naturalWidth > 0) {
-            // zoom bem lento enquanto os créditos passam (efeito Ken Burns)
-            let z = Math.min(1.15, 1 + this.t * 0.00009)
-            let dw = LARG * z, dh = ALT * z
-            des.drawImage(arte, (LARG - dw) / 2, (ALT - dh) / 2, dw, dh)
-            this.desCreditos()
-            return
-        }
-        // céu do pôr do sol
-        let grad = des.createLinearGradient(0, 0, 0, ALT)
-        grad.addColorStop(0, '#2a1a4a')
-        grad.addColorStop(0.45, '#c4502a')
-        grad.addColorStop(0.7, '#ffb347')
-        grad.addColorStop(1, '#d49a4a')
-        des.fillStyle = grad
-        des.fillRect(0, 0, LARG, ALT)
-
-        // sol
-        des.fillStyle = '#ffdf8a'
-        des.beginPath()
-        des.arc(LARG / 2, ALT * 0.62, 70, 0, Math.PI * 2)
-        des.fill()
-
-        // pirâmides no horizonte
-        des.fillStyle = '#7a4a22'
-        des.beginPath()
-        des.moveTo(140, ALT * 0.72); des.lineTo(330, ALT * 0.40); des.lineTo(520, ALT * 0.72)
-        des.closePath(); des.fill()
-        des.fillStyle = '#653a18'
-        des.beginPath()
-        des.moveTo(480, ALT * 0.72); des.lineTo(640, ALT * 0.48); des.lineTo(800, ALT * 0.72)
-        des.closePath(); des.fill()
-
-        // areia
-        des.fillStyle = '#caa05a'
-        des.fillRect(0, ALT * 0.72, LARG, ALT * 0.28)
-        des.fillStyle = '#b8904e'
-        des.beginPath()
-        des.ellipse(LARG * 0.3, ALT * 0.85, 260, 30, 0, 0, Math.PI * 2)
-        des.fill()
-
-        this.desCamelo()
+        // zoom bem lento enquanto os créditos passam (efeito Ken Burns)
+        let z = Math.min(1.15, 1 + this.t * 0.00009)
+        let dw = LARG * z, dh = ALT * z
+        des.drawImage(pegaImg('assets/cenaFinal.png'), (LARG - dw) / 2, (ALT - dh) / 2, dw, dh)
         this.desCreditos()
-    },
-    desCamelo() {
-        let camX = Math.min(LARG - 220, -80 + this.t * 0.55)
-
-        // arte pronta (assets/camelo_sheet.png, 2 quadros)
-        let img = pegaImg('assets/camelo_sheet.png')
-        if (img.complete && img.naturalWidth > 0) {
-            let quadro = Math.floor(this.t / 12) % 2
-            let dh = 130, dw = dh * (img.naturalWidth / 2) / img.naturalHeight
-            desSprite('assets/camelo_sheet.png', 2, quadro, camX, ALT * 0.70, dw, dh)
-            return
-        }
-
-        // fallback: camelo com os dois amigos se afastando (silhueta)
-        let camY = ALT * 0.74
-        des.fillStyle = '#2a1a0c'
-        des.fillRect(camX, camY, 90, 34)                 // corpo
-        des.beginPath()                                   // corcovas
-        des.arc(camX + 28, camY, 16, Math.PI, 0)
-        des.arc(camX + 62, camY, 16, Math.PI, 0)
-        des.fill()
-        des.fillRect(camX + 82, camY - 18, 10, 26)       // pescoço
-        des.fillRect(camX + 80, camY - 28, 18, 12)       // cabeça
-        let passo = Math.sin(this.t / 8) * 4
-        des.fillRect(camX + 10, camY + 32, 7, 26 + passo) // pernas
-        des.fillRect(camX + 34, camY + 32, 7, 26 - passo)
-        des.fillRect(camX + 56, camY + 32, 7, 26 + passo)
-        des.fillRect(camX + 78, camY + 32, 7, 26 - passo)
-        // os 2 amigos montados
-        des.fillStyle = '#3aa0ff'
-        des.fillRect(camX + 18, camY - 22, 14, 20)
-        des.fillStyle = '#37d67a'
-        des.fillRect(camX + 50, camY - 22, 14, 20)
     },
     desCreditos() {
         // créditos subindo
@@ -703,8 +634,7 @@ let telaDica = {
         des.save()
         des.shadowColor = '#ffd84d'
         des.shadowBlur = 26
-        let ic = pegaImg('assets/coletavel.png')
-        if (ic.complete && ic.naturalWidth > 0) des.drawImage(ic, LARG / 2 - 42, 82 + flut, 84, 84)
+        des.drawImage(pegaImg('assets/coletavel.png'), LARG / 2 - 42, 82 + flut, 84, 84)
         des.restore()
 
         // dica principal do GoldenCarlos
@@ -718,7 +648,7 @@ let telaDica = {
 
         // outras dicas
         let dicas = [
-            'VIDA e FORÇA caem dos inimigos — curam e reforçam o tiro.',
+            'O GOLDENCARLOS também cura +1 de vida ao ser coletado.',
             'Na fórmula, sigam a ordem certa — errar tira vida dos dois.',
             'Joguem em 2!  P1 = W A S D + F   •   P2 = setas + L.',
             'No desafio final (boss) não cai coletável.'
