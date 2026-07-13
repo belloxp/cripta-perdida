@@ -669,6 +669,8 @@ let fase7 = {
             new Parede(280, 476, 154, 14)
         ]
         this.porta = new Porta(LARG - 95, ALT - 150, 76, 135)
+        // GoldenCarlos escondido no fim do corredor-isca do topo
+        this.grupoColetaveis = [new Coletavel(795, 95, 'goldencarlos', false)]
         this.fimTimer = 0
         // canvas de escuridão (criado uma vez)
         if (!this.escuro) {
@@ -685,6 +687,19 @@ let fase7 = {
             pl.atualizaTimers()
             pl.mov(area, this.paredes)
         })
+        // pegar o GoldenCarlos escondido
+        for (let i = this.grupoColetaveis.length - 1; i >= 0; i--) {
+            let c = this.grupoColetaveis[i]
+            c.mov()
+            for (let j = 0; j < players.length; j++) {
+                let pl = players[j]
+                if (pl.vivo && pl.colid(c)) {
+                    aplicaColetavel(pl, c)
+                    this.grupoColetaveis.splice(i, 1)
+                    break
+                }
+            }
+        }
         // os dois (vivos) precisam chegar na porta
         let vivos = players.filter((pl) => pl.vivo)
         if (vivos.length > 0 && vivos.every((pl) => pl.colid(this.porta))) {
@@ -698,6 +713,7 @@ let fase7 = {
         desFundo(7)
         this.paredes.forEach((p) => { p.des_obj() })
         this.porta.des_obj()
+        this.grupoColetaveis.forEach((c) => { c.des_obj() }) // fica sob a escuridão: só aparece na luz
         players.forEach((pl) => { pl.des_obj() })
 
         // camada de escuridão com furos de luz ao redor dos players
