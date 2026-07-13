@@ -8,16 +8,22 @@ function desFundo(n) {
     des.drawImage(pegaImg('assets/fase' + n + '.png'), 0, 0, LARG, ALT)
 }
 
+// ---------- coletáveis genéricos (vida / força) ----------
+// GoldenCarlos: coletável especial (o professor). Junte 5 durante as fases → bônus.
+let goldenCarlos = 0
+let bonusGolden = false
+let goldenSoltos = 0 // quantos nasceram nas fases de tiro (máx 4; o 5º fica no labirinto)
+
 function sorteiaDrop(x, y, grupo) {
     if (goldenSoltos < 4 && Math.random() < 0.10) {
         goldenSoltos += 1
         grupo.push(new Coletavel(x, y, 'goldencarlos', true))
     }
 }
-
 function aplicaColetavel(pl, c) {
     if (c.tipo === 'goldencarlos') {
         goldenCarlos += 1
+        pl.cura(1)
         efeitoTexto('GOLDENCARLOS ' + goldenCarlos + '/5', pl.x + pl.w / 2, pl.y - 10, '#ffd84d')
         tocaSom(SONS.item)
         if (goldenCarlos >= 5 && !bonusGolden) {
@@ -29,7 +35,6 @@ function aplicaColetavel(pl, c) {
     }
     tocaSom(SONS.item)
 }
-
 function atualizaColetaveis(grupo) {
     grupo.forEach((c) => { c.mov() })
     for (let i = grupo.length - 1; i >= 0; i--) {
@@ -43,6 +48,139 @@ function atualizaColetaveis(grupo) {
                 break
             }
         }
+    }
+}
+
+// ============================================================
+//  FASE 1 — ÁGUA EM SANGUE (harpa)
+//  Escala harmônica egípcia (dominante frígio):
+//  Dó - Ré bemol - Mi - Fá - Sol - Lá bemol - Si
+// ============================================================
+const NOTAS = [
+    { id: 'c',      nome: 'D\u00F3',     audio: novoAudio('./audios/nota1.wav') },
+    { id: 'rbemol', nome: 'R\u00E9\u266D', audio: novoAudio('./audios/nota2.wav') },
+    { id: 'e',      nome: 'Mi',          audio: novoAudio('./audios/nota3.wav') },
+    { id: 'f',      nome: 'F\u00E1',     audio: novoAudio('./audios/nota4.wav') },
+    { id: 'g',      nome: 'Sol',         audio: novoAudio('./audios/nota5.wav') },
+    { id: 'lbemol', nome: 'L\u00E1\u266D', audio: novoAudio('./audios/nota6.wav') },
+    { id: 'b',      nome: 'Si',          audio: novoAudio('./audios/nota7.wav') }
+]
+NOTAS.forEach((n) => { if (n.audio) n.audio.volume = 0.7 })
+// Teclas das notas — P1 usa 1..7, P2 usa Q..U
+const TECLAS_NOTAS_P1 = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6 }
+const TECLAS_NOTAS_P2 = { 'q': 0, 'w': 1, 'e': 2, 'r': 3, 't': 4, 'y': 5, 'u': 6 }
+
+let fase1 = {
+    nome: 'PRAGA I \u2014 \u00C1gua em Sangue',
+    init() {
+        this.completa = false
+        this.prog = [0, 0]        // progresso na sequência de cada player
+        this.erro = [0, 0]        // timer de flash de erro
+        this.notasVisuais = []
+        this.harpas = [new Harpa(150, 300, 150, 170), new Harpa(600, 300, 150, 170)]
+        this.fimTimer = 0
+        // players parados ao lado das harpas
+        p1.x = 90;  p1.y = 360; p1.facing = 'dir'
+        p2.x = 770; p2.y = 360; p2.facing = 'esq'
+    },
+    // chamado pelo keydown em cripta.js
+    nota(jogador, idx) {
+        if (this.completa || this.prog[jogador] >= NOTAS.length) return
+        let pl = players[jogador]
+        if (!pl.vivo) return
+        let harpa = this.harpas[jogador]
+        harpa.tocando = 25
+        tocaSom(NOTAS[idx].audio)
+        this.notasVisuais.push(new NotaMusical(harpa.x + Math.random() * harpa.w, harpa.y))
+        if (idx === this.prog[jogador]) {
+            this.prog[jogador] += 1
+            if (this.prog[jogador] >= NOTAS.length) {
+                efeitoTexto('PURIFICADO!', harpa.x + harpa.w / 2, harpa.y - 20, '#5db8ff')
+            }
+        } else {
+            this.prog[jogador] = 0
+            this.erro[jogador] = 30
+            tocaSom(SONS.erro)
+        }
+    },
+    atual() {
+        this.harpas.forEach((h) => { h.atual() })
+        this.notasVisuais.forEach((n) => { n.mov() })
+        this.notasVisuais = this.notasVisuais.filter((n) => n.alpha > 0)
+        this.erro = this.erro.map((e) => Math.max(0, e - 1))
+        players.forEach((pl) => { pl.atualizaTimers() })
+        if (this.prog[0] >= NOTAS.length && this.prog[1] >= NOTAS.length) {
+            this.fimTimer += 1
+            if (this.fimTimer > 90) this.completa = true
+        }
+    },
+    des() {
+        desFundo(1)
+
+        // água no fundo: vai do vermelho (sangue) ao azul conforme o progresso
+        let pureza = (this.prog[0] + this.prog[1]) / (NOTAS.length * 2)
+        let r = Math.floor(160 - 130 * pureza)
+        let g = Math.floor(20 + 90 * pureza)
+        let b = Math.floor(30 + 180 * pureza)
+        let topoAgua = ALT - 90
+        let tempo = Date.now() / 480
+
+        // corpo da água com gradiente de profundidade
+        let gAgua = des.createLinearGradient(0, topoAgua, 0, ALT)
+        gAgua.addColorStop(0, 'rgb(' + Math.min(255, r + 45) + ',' + Math.min(255, g + 45) + ',' + Math.min(255, b + 55) + ')')
+        gAgua.addColorStop(1, 'rgb(' + Math.floor(r * 0.45) + ',' + Math.floor(g * 0.45) + ',' + Math.floor(b * 0.55) + ')')
+        des.fillStyle = gAgua
+        des.fillRect(0, topoAgua, LARG, 90)
+
+        // linha de superfície
+        des.fillStyle = 'rgba(255,255,255,0.3)'
+        des.fillRect(0, topoAgua, LARG, 2)
+
+        // toque de mosaico: quadradinhos discretos tremeluzindo dentro da água
+        const CEL = 12
+        for (let cx = 0; cx < LARG / CEL; cx++) {
+            for (let cy = 1; cy < 7; cy++) {
+                let v = Math.sin(cx * 3.17 + cy * 5.71 + Math.sin(cx * 1.3 - cy * 0.7 + tempo) * 2 + tempo * 1.2)
+                if (v > 0.45) {
+                    des.fillStyle = 'rgba(255,255,255,' + (0.05 + (v - 0.45) * 0.10).toFixed(3) + ')'
+                    des.fillRect(cx * CEL, topoAgua + cy * CEL, CEL, CEL)
+                } else if (v < -0.72) {
+                    des.fillStyle = 'rgba(0,0,30,0.08)'
+                    des.fillRect(cx * CEL, topoAgua + cy * CEL, CEL, CEL)
+                }
+            }
+        }
+
+        this.harpas.forEach((h) => { h.des_obj() })
+        players.forEach((pl) => { pl.des_obj() })
+        this.notasVisuais.forEach((n) => { n.des_obj() })
+
+        // UI da sequência de notas de cada player
+        this.desSequencia(0, 70, 100, TECLAS_NOTAS_P1)
+        this.desSequencia(1, LARG - 70 - 7 * 52, 100, TECLAS_NOTAS_P2)
+
+        let t = new Texto()
+        t.des_text('Toquem a escala sagrada para purificar a \u00E1gua!', LARG / 2, 88, '#f3e9d2', 'bold 17px monospace', 'center')
+    },
+    desSequencia(jogador, x, y, mapaTeclas) {
+        let teclasNota = Object.keys(mapaTeclas)
+        let prog = this.prog[jogador]
+        let nomeP = jogador === 0 ? NOMES.p1 : NOMES.p2
+        des.fillStyle = this.erro[jogador] > 0 ? '#ff5050' : (jogador === 0 ? '#3aa0ff' : '#37d67a')
+        des.font = 'bold 14px monospace'
+        des.fillText(nomeP + (prog >= NOTAS.length ? ' \u2713 COMPLETO' : ''), x, y - 12)
+        NOTAS.forEach((n, i) => {
+            let nx = x + i * 52
+            des.fillStyle = i < prog ? '#37d67a' : (i === prog ? '#ffd84d' : 'rgba(255,255,255,0.15)')
+            des.fillRect(nx, y, 46, 46)
+            des.fillStyle = '#000'
+            des.font = 'bold 14px monospace'
+            des.textAlign = 'center'
+            des.fillText(n.nome, nx + 23, y + 22)
+            des.font = '11px monospace'
+            des.fillText('[' + teclasNota[i].toUpperCase() + ']', nx + 23, y + 38)
+            des.textAlign = 'left'
+        })
     }
 }
 
@@ -73,9 +211,8 @@ function fabricaFaseTiro(cfg) {
                 if (this.timers[i] >= s.intervalo) {
                     this.timers[i] = 0
                     let posY = zTopo + Math.random() * (zBase - zTopo - s.h)
-                    let sprite = s.sprites[Math.floor(Math.random() * s.sprites.length)]
                     let vel = Math.random() * (s.vel[1] - s.vel[0]) + s.vel[0]
-                    this.grupoInimigos.push(new Inimigo(LARG + 20, posY, s.w, s.h, sprite, vel, s.hp || 1, s.sway, s.sheet, s.frames, s.anim))
+                    this.grupoInimigos.push(new Inimigo(LARG + 20, posY, s.w, s.h, null, vel, s.hp || 1, s.sway, s.sheet, s.frames, s.anim))
                 }
             })
         },
@@ -154,9 +291,9 @@ let fase2 = fabricaFaseTiro({
     meta: 20,
     zonaTopo: 340, zonaBase: 580, // faixa onde inimigos e players andam (340 = onde o chão do fundo começa)
     spawns: [
-        { sprites: ['assets/ra1.png', 'assets/ra2.png', 'assets/ra3.png'], sheet: 'assets/ra_sheet.png', frames: 3, w: 84, h: 44, vel: [4.5, 6.5], intervalo: 110, sway: 0 },
-        { sprites: ['assets/moscas1.png', 'assets/moscas2.png', 'assets/moscas3.png'], sheet: 'assets/mosquito_sheet.png', frames: 3, w: 62, h: 56, vel: [4, 6], intervalo: 80, sway: 2.2 },
-        { sprites: ['assets/moscas1.png', 'assets/moscas2.png', 'assets/moscas3.png'], sheet: 'assets/mosca_sheet.png', frames: 3, w: 68, h: 72, vel: [3, 4.5], intervalo: 100, sway: 1.4 }
+        { sheet: 'assets/ra_sheet.png', frames: 3, w: 84, h: 44, vel: [4.5, 6.5], intervalo: 110, sway: 0 },
+        { sheet: 'assets/mosquito_sheet.png', frames: 3, w: 62, h: 56, vel: [4, 6], intervalo: 80, sway: 2.2 },
+        { sheet: 'assets/mosca_sheet.png', frames: 3, w: 68, h: 72, vel: [3, 4.5], intervalo: 100, sway: 1.4 }
     ]
 })
 
@@ -167,235 +304,10 @@ let fase6 = fabricaFaseTiro({
     meta: 25,
     zonaTopo: 340, zonaBase: 580, // faixa onde inimigos e players andam (340 = onde o chão do fundo começa)
     spawns: [
-        { sprites: ['assets/gafanhotos1.png', 'assets/gafanhotos2.png', 'assets/gafanhotos3.png'], sheet: 'assets/gafanhoto_sheet.png', frames: 3, w: 66, h: 48, vel: [4, 6], intervalo: 38, sway: 1.6, anim: 0.05 },
-        { sprites: ['assets/gafanhotos1.png', 'assets/gafanhotos2.png', 'assets/gafanhotos3.png'], sheet: 'assets/gafanhoto_sheet.png', frames: 3, w: 80, h: 58, vel: [3, 4.5], intervalo: 90, sway: 0.8, hp: 2, anim: 0.05 }
+        { sheet: 'assets/gafanhoto_sheet.png', frames: 3, w: 66, h: 48, vel: [4, 6], intervalo: 38, sway: 1.6, anim: 0.05 },
+        { sheet: 'assets/gafanhoto_sheet.png', frames: 3, w: 80, h: 58, vel: [3, 4.5], intervalo: 90, sway: 0.8, hp: 2, anim: 0.05 }
     ]
 })
-
-
-// ============================================================
-//  FASE 8 — MORTE DOS PRIMOGÊNITOS (boss: Anjo da Morte)
-//  Tiro normal mirado + especial a cada X segundos (mais dano)
-// ============================================================
-let fase8 = {
-    nome: 'PRAGA X \u2014 O Anjo da Morte',
-    init() {
-        this.completa = false
-        this.boss = new Boss(LARG / 2 - 75, 95, 150, 160)
-        this.grupoTiros = []      // tiros dos players
-        this.grupoTirosBoss = []
-        this.grupoColetaveis = []
-        this.timeTiro = 0
-        this.timeEspecial = 0
-        this.timeDrop = 0
-        p1.x = 280; p1.y = ALT - 110; p1.facing = 'dir'
-        p2.x = 580; p2.y = ALT - 110; p2.facing = 'esq'
-        iniciaMusicaBoss()
-    },
-    atual() {
-        let area = { x: 10, y: ALT - 230, w: LARG - 20, h: 220, vert: true }
-        players.forEach((pl) => {
-            pl.atualizaTimers()
-            pl.mov(area)
-            if (teclas[pl.teclas.tiro]) pl.atira(this.grupoTiros, 'cima')
-        })
-
-        this.boss.mov()
-
-        // tiro normal do boss: mira em um player vivo aleatório
-        this.timeTiro += 1
-        if (this.timeTiro >= 55) {
-            this.timeTiro = 0
-            let vivos = players.filter((pl) => pl.vivo)
-            if (vivos.length > 0) {
-                let alvo = vivos[Math.floor(Math.random() * vivos.length)]
-                let bx = this.boss.x + this.boss.w / 2
-                let by = this.boss.y + this.boss.h
-                let dx = (alvo.x + alvo.w / 2) - bx
-                let dy = (alvo.y + alvo.h / 2) - by
-                let dist = Math.sqrt(dx * dx + dy * dy) || 1
-                this.grupoTirosBoss.push(new TiroBoss(bx - 21, by - 10, 42, 42, dx / dist * 4.5, dy / dist * 4.5, 1, false))
-            }
-        }
-
-        // ⚙️ ESPECIAL DO BOSS: a cada 8 segundos (480 frames), dano 3
-        this.timeEspecial += 1
-        if (this.timeEspecial >= 480) {
-            this.timeEspecial = 0
-            let bx = this.boss.x + this.boss.w / 2
-            this.grupoTirosBoss.push(new TiroBoss(bx - 30, this.boss.y + this.boss.h - 10, 60, 60, 0, 3, 3, true))
-            efeitoTexto('!!! ESPECIAL !!!', bx, this.boss.y - 10, '#ff3030')
-        }
-
-        // tiros dos players x boss
-        for (let i = this.grupoTiros.length - 1; i >= 0; i--) {
-            let tiro = this.grupoTiros[i]
-            tiro.mov()
-            if (tiro.foraDaTela()) { this.grupoTiros.splice(i, 1); continue }
-            if (tiro.colid(this.boss)) {
-                this.boss.vida -= tiro.dano
-                if (tiro.dono) tiro.dono.pts += 1
-                this.grupoTiros.splice(i, 1)
-            }
-        }
-
-        // tiros do boss x players
-        for (let i = this.grupoTirosBoss.length - 1; i >= 0; i--) {
-            let tb = this.grupoTirosBoss[i]
-            tb.mov()
-            if (tb.y > ALT + 80 || tb.x < -80 || tb.x > LARG + 80) {
-                this.grupoTirosBoss.splice(i, 1)
-                continue
-            }
-            for (let j = 0; j < players.length; j++) {
-                let pl = players[j]
-                if (pl.vivo && pl.colid(tb)) {
-                    pl.levaDano(tb.dano)
-                    this.grupoTirosBoss.splice(i, 1)
-                    break
-                }
-            }
-        }
-
-        // desafio final: sem coletáveis aqui
-
-        if (this.boss.vida <= 0) {
-            this.boss.vida = 0
-            this.completa = true
-        }
-    },
-    des() {
-        desFundo(8)
-        this.boss.des_obj()
-        this.grupoTirosBoss.forEach((t) => { t.des_obj() })
-        this.grupoColetaveis.forEach((c) => { c.des_obj() })
-        this.grupoTiros.forEach((t) => { t.des_tiro() })
-        players.forEach((pl) => { pl.des_obj() })
-
-        // barra de vida do boss com rosto
-        let bx = LARG / 2 - 180
-        des.drawImage(pegaImg('assets/selecaoBoss1.png'), bx - 48, 66, 42, 42)
-        let barra = new BarraProgresso()
-        barra.des(bx, 76, 360, 22, this.boss.vida / this.boss.maxVida, '#2a1020', '#b14dff', 'ANJO DA MORTE: ' + Math.max(0, Math.ceil(this.boss.vida)))
-    }
-}
-
-
-// ============================================================
-//  FASE 1 — ÁGUA EM SANGUE (harpa)
-//  Escala harmônica egípcia (dominante frígio):
-//  Dó - Ré bemol - Mi - Fá - Sol - Lá bemol - Si
-// ============================================================
-const NOTAS = [
-    { id: 'c',      nome: 'D\u00F3',     audio: novoAudio('./audios/nota1.wav') },
-    { id: 'rbemol', nome: 'R\u00E9\u266D', audio: novoAudio('./audios/nota2.wav') },
-    { id: 'e',      nome: 'Mi',          audio: novoAudio('./audios/nota3.wav') },
-    { id: 'f',      nome: 'F\u00E1',     audio: novoAudio('./audios/nota4.wav') },
-    { id: 'g',      nome: 'Sol',         audio: novoAudio('./audios/nota5.wav') },
-    { id: 'lbemol', nome: 'L\u00E1\u266D', audio: novoAudio('./audios/nota6.wav') },
-    { id: 'b',      nome: 'Si',          audio: novoAudio('./audios/nota7.wav') }
-]
-
-
-// Teclas das notas — P1 usa 1..7, P2 usa Q..U
-const TECLAS_NOTAS_P1 = { '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6 }
-
-
-const TECLAS_NOTAS_P2 = { 'q': 0, 'w': 1, 'e': 2, 'r': 3, 't': 4, 'y': 5, 'u': 6 }
-
-
-let fase1 = {
-    nome: 'PRAGA I \u2014 \u00C1gua em Sangue',
-    init() {
-        this.completa = false
-        this.prog = [0, 0]        // progresso na sequência de cada player
-        this.erro = [0, 0]        // timer de flash de erro
-        this.notasVisuais = []
-        this.harpas = [new Harpa(150, 300, 150, 170), new Harpa(600, 300, 150, 170)]
-        this.fimTimer = 0
-        // players parados ao lado das harpas
-        p1.x = 90;  p1.y = 360; p1.facing = 'dir'
-        p2.x = 770; p2.y = 360; p2.facing = 'esq'
-    },
-    // chamado pelo keydown em cripta.js
-    nota(jogador, idx) {
-        if (this.completa || this.prog[jogador] >= NOTAS.length) return
-        let pl = players[jogador]
-        if (!pl.vivo) return
-        let harpa = this.harpas[jogador]
-        harpa.tocando = 25
-        tocaSom(NOTAS[idx].audio)
-        this.notasVisuais.push(new NotaMusical(harpa.x + Math.random() * harpa.w, harpa.y))
-        if (idx === this.prog[jogador]) {
-            this.prog[jogador] += 1
-            if (this.prog[jogador] >= NOTAS.length) {
-                efeitoTexto('PURIFICADO!', harpa.x + harpa.w / 2, harpa.y - 20, '#5db8ff')
-            }
-        } else {
-            this.prog[jogador] = 0
-            this.erro[jogador] = 30
-            tocaSom(SONS.erro)
-        }
-    },
-    atual() {
-        this.harpas.forEach((h) => { h.atual() })
-        this.notasVisuais.forEach((n) => { n.mov() })
-        this.notasVisuais = this.notasVisuais.filter((n) => n.alpha > 0)
-        this.erro = this.erro.map((e) => Math.max(0, e - 1))
-        players.forEach((pl) => { pl.atualizaTimers() })
-        if (this.prog[0] >= NOTAS.length && this.prog[1] >= NOTAS.length) {
-            this.fimTimer += 1
-            if (this.fimTimer > 90) this.completa = true
-        }
-    },
-    des() {
-        desFundo(1)
-
-        // água no fundo: vai do vermelho (sangue) ao azul conforme o progresso
-        let pureza = (this.prog[0] + this.prog[1]) / (NOTAS.length * 2)
-        let r = Math.floor(160 - 130 * pureza)
-        let g = Math.floor(20 + 90 * pureza)
-        let b = Math.floor(30 + 180 * pureza)
-        des.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')'
-        des.fillRect(0, ALT - 90, LARG, 90)
-        des.fillStyle = 'rgba(255,255,255,0.12)'
-        for (let i = 0; i < 6; i++) {
-            des.fillRect(i * 160 + (Date.now() / 40 % 160), ALT - 80 + (i % 3) * 22, 60, 4)
-        }
-
-        this.harpas.forEach((h) => { h.des_obj() })
-        players.forEach((pl) => { pl.des_obj() })
-        this.notasVisuais.forEach((n) => { n.des_obj() })
-
-        // UI da sequência de notas de cada player
-        this.desSequencia(0, 70, 100, TECLAS_NOTAS_P1)
-        this.desSequencia(1, LARG - 70 - 7 * 52, 100, TECLAS_NOTAS_P2)
-
-        let t = new Texto()
-        t.des_text('Toquem a escala sagrada para purificar a \u00E1gua!', LARG / 2, 88, '#f3e9d2', 'bold 17px monospace', 'center')
-    },
-    desSequencia(jogador, x, y, mapaTeclas) {
-        let teclasNota = Object.keys(mapaTeclas)
-        let prog = this.prog[jogador]
-        let nomeP = jogador === 0 ? NOMES.p1 : NOMES.p2
-        des.fillStyle = this.erro[jogador] > 0 ? '#ff5050' : (jogador === 0 ? '#3aa0ff' : '#37d67a')
-        des.font = 'bold 14px monospace'
-        des.fillText(nomeP + (prog >= NOTAS.length ? ' \u2713 COMPLETO' : ''), x, y - 12)
-        NOTAS.forEach((n, i) => {
-            let nx = x + i * 52
-            des.fillStyle = i < prog ? '#37d67a' : (i === prog ? '#ffd84d' : 'rgba(255,255,255,0.15)')
-            des.fillRect(nx, y, 46, 46)
-            des.fillStyle = '#000'
-            des.font = 'bold 14px monospace'
-            des.textAlign = 'center'
-            des.fillText(n.nome, nx + 23, y + 22)
-            des.font = '11px monospace'
-            des.fillText('[' + teclasNota[i].toUpperCase() + ']', nx + 23, y + 38)
-            des.textAlign = 'left'
-        })
-    }
-}
-
 
 // ============================================================
 //  FASE 3 — PESTE NO GADO (fórmula do antídoto)
@@ -493,19 +405,7 @@ let fase3 = {
 
         // caldeirão (imagem estática — sem sheet, pra não "andar" de lado)
         let cx = LARG / 2 - 70, cy = 330
-        let cald = pegaImg('assets/caldeirao.png')
-        if (cald.complete && cald.naturalWidth > 0) {
-            des.drawImage(cald, cx - 5, cy - 55, 150, 205)
-        } else {
-            des.fillStyle = '#222'
-            des.beginPath()
-            des.ellipse(cx + 70, cy + 70, 90, 60, 0, 0, Math.PI * 2)
-            des.fill()
-            des.fillStyle = this.passo > 0 ? '#7dd34a' : '#5d4a8a'
-            des.beginPath()
-            des.ellipse(cx + 70, cy + 30, 74, 22, 0, 0, Math.PI * 2)
-            des.fill()
-        }
+        des.drawImage(pegaImg('assets/caldeirao.png'), cx - 5, cy - 55, 150, 205)
         if (this.borbulha > 0) {
             des.fillStyle = 'rgba(255,255,255,0.5)'
             for (let i = 0; i < 5; i++) {
@@ -551,7 +451,6 @@ let fase3 = {
         }
     }
 }
-
 
 // ============================================================
 //  FASE 4 — ÚLCERAS E FERIDAS (labirinto de grades de ferro)
@@ -702,7 +601,6 @@ let fase4 = {
     }
 }
 
-
 // ============================================================
 //  FASE 5 — CHUVA DE GRANIZO
 //  Desviar das pedras + segurar ESPAÇO na zona do mecanismo
@@ -769,16 +667,13 @@ let fase5 = {
         desFundo(5)
 
         // porta de pedra (imagem) sobe conforme a barra enche, presa dentro da abertura
-        let porta = pegaImg('assets/portaoFase5.png')
-        if (porta.complete && porta.naturalWidth > 0) {
-            let p = this.portao
-            des.save()
-            des.beginPath()
-            des.rect(p.x, p.y, p.w, p.h)
-            des.clip()
-            des.drawImage(porta, p.x, p.y - (this.barra / 100) * p.h, p.w, p.h)
-            des.restore()
-        }
+        let p = this.portao
+        des.save()
+        des.beginPath()
+        des.rect(p.x, p.y, p.w, p.h)
+        des.clip()
+        des.drawImage(pegaImg('assets/portaoFase5.png'), p.x, p.y - (this.barra / 100) * p.h, p.w, p.h)
+        des.restore()
 
         // zona do mecanismo
         des.strokeStyle = '#ffd84d'
@@ -801,7 +696,6 @@ let fase5 = {
         barra.des(LARG / 2 - 150, 70, 300, 20, this.barra / 100, '#2a2118', '#c4943a', 'PORT\u00C3O: ' + Math.floor(this.barra) + '%')
     }
 }
-
 
 // ============================================================
 //  FASE 7 — TREVAS (labirinto com luz baixa)
@@ -841,6 +735,8 @@ let fase7 = {
         }
         p1.x = 30; p1.y = 95; p1.facing = 'dir'
         p2.x = 84; p2.y = 95; p2.facing = 'dir'
+        // pernas exaustas depois das hordas: um pouco mais lentos nas trevas
+        players.forEach((pl) => { pl.vel = 3.1 })
     },
     atual() {
         let area = { x: 12, y: 72, w: LARG - 24, h: ALT - 84, vert: true }
@@ -903,17 +799,112 @@ let fase7 = {
     }
 }
 
+// ============================================================
+//  FASE 8 — MORTE DOS PRIMOGÊNITOS (boss: Anjo da Morte)
+//  Tiro normal mirado + especial a cada X segundos (mais dano)
+// ============================================================
+let fase8 = {
+    nome: 'PRAGA X \u2014 O Anjo da Morte',
+    init() {
+        this.completa = false
+        this.boss = new Boss(LARG / 2 - 75, 95, 150, 160)
+        this.grupoTiros = []      // tiros dos players
+        this.grupoTirosBoss = []
+        this.grupoColetaveis = []
+        this.timeTiro = 0
+        this.timeEspecial = 0
+        this.timeDrop = 0
+        p1.x = 280; p1.y = ALT - 110; p1.facing = 'dir'
+        p2.x = 580; p2.y = ALT - 110; p2.facing = 'esq'
+        iniciaMusicaBoss()
+    },
+    atual() {
+        let area = { x: 10, y: ALT - 230, w: LARG - 20, h: 220, vert: true }
+        players.forEach((pl) => {
+            pl.atualizaTimers()
+            pl.mov(area)
+            if (teclas[pl.teclas.tiro]) pl.atira(this.grupoTiros, 'cima')
+        })
+
+        this.boss.mov()
+
+        // tiro normal do boss: mira em um player vivo aleatório
+        this.timeTiro += 1
+        if (this.timeTiro >= 55) {
+            this.timeTiro = 0
+            let vivos = players.filter((pl) => pl.vivo)
+            if (vivos.length > 0) {
+                let alvo = vivos[Math.floor(Math.random() * vivos.length)]
+                let bx = this.boss.x + this.boss.w / 2
+                let by = this.boss.y + this.boss.h
+                let dx = (alvo.x + alvo.w / 2) - bx
+                let dy = (alvo.y + alvo.h / 2) - by
+                let dist = Math.sqrt(dx * dx + dy * dy) || 1
+                this.grupoTirosBoss.push(new TiroBoss(bx - 21, by - 10, 42, 42, dx / dist * 4.5, dy / dist * 4.5, 1, false))
+            }
+        }
+
+        // ⚙️ ESPECIAL DO BOSS: a cada 8 segundos (480 frames), dano 3
+        this.timeEspecial += 1
+        if (this.timeEspecial >= 480) {
+            this.timeEspecial = 0
+            let bx = this.boss.x + this.boss.w / 2
+            this.grupoTirosBoss.push(new TiroBoss(bx - 30, this.boss.y + this.boss.h - 10, 60, 60, 0, 3, 3, true))
+            efeitoTexto('!!! ESPECIAL !!!', bx, this.boss.y - 10, '#ff3030')
+        }
+
+        // tiros dos players x boss
+        for (let i = this.grupoTiros.length - 1; i >= 0; i--) {
+            let tiro = this.grupoTiros[i]
+            tiro.mov()
+            if (tiro.foraDaTela()) { this.grupoTiros.splice(i, 1); continue }
+            if (tiro.colid(this.boss)) {
+                this.boss.vida -= tiro.dano
+                if (tiro.dono) tiro.dono.pts += 1
+                this.grupoTiros.splice(i, 1)
+            }
+        }
+
+        // tiros do boss x players
+        for (let i = this.grupoTirosBoss.length - 1; i >= 0; i--) {
+            let tb = this.grupoTirosBoss[i]
+            tb.mov()
+            if (tb.y > ALT + 80 || tb.x < -80 || tb.x > LARG + 80) {
+                this.grupoTirosBoss.splice(i, 1)
+                continue
+            }
+            for (let j = 0; j < players.length; j++) {
+                let pl = players[j]
+                if (pl.vivo && pl.colid(tb)) {
+                    pl.levaDano(tb.dano)
+                    this.grupoTirosBoss.splice(i, 1)
+                    break
+                }
+            }
+        }
+
+        // desafio final: sem coletáveis aqui
+
+        if (this.boss.vida <= 0) {
+            this.boss.vida = 0
+            this.completa = true
+        }
+    },
+    des() {
+        desFundo(8)
+        this.boss.des_obj()
+        this.grupoTirosBoss.forEach((t) => { t.des_obj() })
+        this.grupoColetaveis.forEach((c) => { c.des_obj() })
+        this.grupoTiros.forEach((t) => { t.des_tiro() })
+        players.forEach((pl) => { pl.des_obj() })
+
+        // barra de vida do boss com rosto
+        let bx = LARG / 2 - 180
+        des.drawImage(pegaImg('assets/selecaoBoss1.png'), bx - 48, 66, 42, 42)
+        let barra = new BarraProgresso()
+        barra.des(bx, 76, 360, 22, this.boss.vida / this.boss.maxVida, '#2a1020', '#b14dff', 'ANJO DA MORTE: ' + Math.max(0, Math.ceil(this.boss.vida)))
+    }
+}
 
 // ---------- registro das fases ----------
 const FASES = { 1: fase1, 2: fase2, 3: fase3, 5: fase5, 6: fase6, 7: fase7, 8: fase8 }
-
-
-// ---------- coletáveis genéricos (vida / força) ----------
-// GoldenCarlos: coletável especial (o professor). Junte 5 durante as fases → bônus.
-let goldenCarlos = 0
-
-
-let bonusGolden = false
-
-
-let goldenSoltos = 0 // quantos nasceram nas fases de tiro (máx 4; o 5º fica no labirinto)
