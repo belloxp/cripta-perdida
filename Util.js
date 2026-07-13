@@ -434,11 +434,9 @@ class Vaso extends Obj {
 }
 
 class Coletavel extends Obj {
-    // tipo: 'vida' | 'forca' | 'amuleto' (objetivo da fase 4)
+    // tipo: 'goldencarlos' | 'amuleto' (objetivo da fase do gado)
     constructor(x, y, tipo, cai) {
-        let img = tipo === 'vida' ? 'assets/vida.png'
-            : (tipo === 'forca' ? 'assets/forca.png' : 'assets/coletavel.png')
-        super(x, y, 64, 64, img)
+        super(x, y, 64, 64, 'assets/coletavel.png')
         this.tipo = tipo
         this.cai = !!cai
         this.t = Math.random() * 6
