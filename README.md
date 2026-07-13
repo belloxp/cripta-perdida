@@ -1,4 +1,4 @@
-<h1 align="center">🏺 A Cripta Perdida</h1>
+<h1 align="center">A Cripta Perdida</h1>
 
 <p align="center">
   <em>Dois exploradores. Dez pragas. Uma saída.</em>
@@ -127,12 +127,12 @@ Projeto desenvolvido no **SESI SENAI — Tijucas**, sob orientação do professo
 | **Bello** | Engine e arquitetura (loop, colisão AABB, classe `Player`), HUD, máquina de estados e integração das branches. Toda a **arte** do jogo. |
 | **Rafael** | As fases-puzzle: a harpa, o antídoto, o granizo e o labirinto nas trevas — junto com a escuridão dinâmica e o portão. |
 | **Rech** | Inimigos, a fábrica de fases de tiro, as animações por spritesheet e o **Anjo da Morte** por completo. |
-| **Mario** | Cutscenes com efeito máquina de escrever, telas e manual, cena final — e toda a **trilha sonora autoral**. |
+| **Mario** | Cutscenes com efeito máquina de escrever, telas e manual, cena final e auxilio fases de tiro— e toda a **trilha sonora**. |
 
 Workflow em `main` / `develop` / `feature/*`, com integração por merge a cada release.
 
 ---
 
 <p align="center">
-  <sub>Feito com JavaScript puro, café e nenhuma dependência. 🐪</sub>
+  <sub>Feito com JavaScript e muito esforço. 🐪</sub>
 </p>
