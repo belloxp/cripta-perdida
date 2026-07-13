@@ -1,30 +1,30 @@
-// ============================================================
-//  A CRIPTA PERDIDA — Util.js
-//  Classes base e helpers (mesma arquitetura do jogo base:
-//  Obj com des_obj() e colid() AABB, subclasses com mov())
-// ============================================================
 class Coletavel extends Obj {
+    // tipo: 'vida' | 'forca' | 'amuleto' (objetivo da fase 4)
     constructor(x, y, tipo, cai) {
-        super(x, y, 30, 30, 'assets/coletavel.png')
-        this.tipo = tipo          // 'vida' | 'forca' | 'amuleto'
+        let img = tipo === 'vida' ? 'assets/vida.png'
+            : (tipo === 'forca' ? 'assets/forca.png' : 'assets/coletavel.png')
+        super(x, y, 64, 64, img)
+        this.tipo = tipo
         this.cai = !!cai
         this.t = Math.random() * 6
     }
 
     mov() {
         this.t += 0.08
-        if (this.cai) this.y += 2.2
+        if (this.cai) this.x -= 3   // vem pra esquerda, na direção do player
     }
 
     des_obj() {
         let flutua = Math.sin(this.t) * 3
+        if (this.tipo === 'goldencarlos') {
+            des.save()
+            des.shadowColor = '#ffd84d'
+            des.shadowBlur = 18
+            des.drawImage(pegaImg(this.at), this.x, this.y + flutua, this.w, this.h)
+            des.restore()
+            return
+        }
         des.drawImage(pegaImg(this.at), this.x, this.y + flutua, this.w, this.h)
-        des.fillStyle = '#000'
-        des.font = 'bold 13px monospace'
-        des.textAlign = 'center'
-        let letra = this.tipo === 'vida' ? 'V' : (this.tipo === 'forca' ? 'F' : 'A')
-        des.fillText(letra, this.x + this.w / 2, this.y + this.h / 2 + 5 + flutua)
-        des.textAlign = 'left'
     }
 }
 
@@ -438,7 +438,7 @@ class Inimigo extends Obj {
 
 
 // ============================================================
-//  TIRO DOS JOGADORES
+//  TIRO DOS JOGADORES (retângulo, igual ao jogo base)
 // ============================================================
 class Tiro extends Obj {
     constructor(x, y, w, h, cor, dx, dy, dano, dono) {
@@ -451,6 +451,18 @@ class Tiro extends Obj {
     }
 
     des_tiro() {
+        let img = pegaImg('assets/tiro.png')
+        if (img.complete && img.naturalWidth > 0) {
+            // a imagem aponta pra CIMA; gira na direção do disparo
+            let cx = this.x + this.w / 2, cy = this.y + this.h / 2
+            let esp = 10, comp = 26
+            des.save()
+            des.translate(cx, cy)
+            des.rotate(Math.atan2(this.dy, this.dx) + Math.PI / 2)
+            des.drawImage(img, -esp / 2, -comp / 2, esp, comp)
+            des.restore()
+            return
+        }
         des.fillStyle = this.cor
         des.fillRect(this.x, this.y, this.w, this.h)
     }
