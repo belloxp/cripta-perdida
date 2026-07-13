@@ -897,3 +897,7 @@ let fase7 = {
         t.des_text('Encontrem a sa\u00EDda na escurid\u00E3o...', LARG / 2, 88, 'rgba(243,233,210,0.6)', 'italic 15px monospace', 'center')
     }
 }
+
+
+// ---------- registro das fases ----------
+const FASES = { 1: fase1, 2: fase2, 3: fase3, 5: fase5, 6: fase6, 7: fase7, 8: fase8 }
