@@ -60,6 +60,8 @@ const ROTEIRO = {
         { quem: 'p1', txt: 'Não é o céu. São GAFANHOTOS. Milhares. ATIRA!' }
     ],
     pre7: [
+        { quem: 'p1', txt: 'Essas hordas de inimigos me deixaram cansado demais... sinto minhas pernas exaustas.' },
+        { quem: 'p2', txt: 'Eu também. Mas vamos prosseguir.' },
         { quem: 'p1', txt: 'As tochas apagaram todas de uma vez. Não enxergo quase nada...' },
         { quem: 'p2', txt: 'A nona praga: as trevas. Fica perto de mim. Vamos achar a saída no escuro.' }
     ],
