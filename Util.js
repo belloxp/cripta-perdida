@@ -1,81 +1,3 @@
-class Coletavel extends Obj {
-    // tipo: 'vida' | 'forca' | 'amuleto' (objetivo da fase 4)
-    constructor(x, y, tipo, cai) {
-        let img = tipo === 'vida' ? 'assets/vida.png'
-            : (tipo === 'forca' ? 'assets/forca.png' : 'assets/coletavel.png')
-        super(x, y, 64, 64, img)
-        this.tipo = tipo
-        this.cai = !!cai
-        this.t = Math.random() * 6
-    }
-
-    mov() {
-        this.t += 0.08
-        if (this.cai) this.x -= 3   // vem pra esquerda, na direção do player
-    }
-
-    des_obj() {
-        let flutua = Math.sin(this.t) * 3
-        if (this.tipo === 'goldencarlos') {
-            des.save()
-            des.shadowColor = '#ffd84d'
-            des.shadowBlur = 18
-            des.drawImage(pegaImg(this.at), this.x, this.y + flutua, this.w, this.h)
-            des.restore()
-            return
-        }
-        des.drawImage(pegaImg(this.at), this.x, this.y + flutua, this.w, this.h)
-    }
-}
-
-// ============================================================
-//  PAREDE (grades de ferro dos labirintos) E PORTA
-// ============================================================
-class Parede extends Obj {
-    constructor(x, y, w, h) {
-        super(x, y, w, h, null)
-    }
-
-    des_obj() {
-        let img = pegaImg('assets/muro.png')
-        if (img.complete && img.naturalWidth > 0) {
-            if (!Parede._pat) {
-                let tile = document.createElement('canvas')
-                tile.width = 220; tile.height = 220
-                tile.getContext('2d').drawImage(img, 0, 0, 220, 220)
-                Parede._pat = des.createPattern(tile, 'repeat')
-            }
-            des.save()
-            des.beginPath()
-            des.rect(this.x, this.y, this.w, this.h)
-            des.clip()
-            des.fillStyle = Parede._pat
-            des.fillRect(this.x, this.y, this.w, this.h)
-            des.restore()
-            return
-        }
-        des.fillStyle = '#2c2c33'
-        des.fillRect(this.x, this.y, this.w, this.h)
-        des.strokeStyle = '#55555f'
-        des.lineWidth = 1
-        if (this.w > this.h) {
-            for (let i = this.x + 8; i < this.x + this.w; i += 16) {
-                des.beginPath()
-                des.moveTo(i, this.y)
-                des.lineTo(i, this.y + this.h)
-                des.stroke()
-            }
-        } else {
-            for (let i = this.y + 8; i < this.y + this.h; i += 16) {
-                des.beginPath()
-                des.moveTo(this.x, i)
-                des.lineTo(this.x + this.w, i)
-                des.stroke()
-            }
-        }
-    }
-}
-
 // ============================================================
 //  A CRIPTA PERDIDA — Util.js
 //  Classes base e helpers (mesma arquitetura do jogo base:
@@ -83,131 +5,6 @@ class Parede extends Obj {
 // ============================================================
 
 let des = null // contexto 2D — atribuído em cripta.js
-
-// ============================================================
-//  HARPA E NOTA MUSICAL (fase 1)
-// ============================================================
-class Harpa extends Obj {
-    constructor(x, y, w, h) {
-        super(x, y, w, h, 'assets/harpa_001.png')
-        this.tocando = 0
-        this.frame = 0
-        this.frameTimer = 0
-    }
-
-    atual() {
-        if (this.tocando > 0) {
-            this.tocando -= 1
-            this.frameTimer += 1
-            if (this.frameTimer >= 6) {
-                this.frameTimer = 0
-                this.frame = this.frame === 0 ? 1 : 0
-            }
-        } else {
-            this.frame = 0
-        }
-    }
-
-    des_obj() {
-        des.drawImage(pegaImg('assets/harpa_' + (this.frame === 0 ? '001' : '002') + '.png'), this.x, this.y, this.w, this.h)
-    }
-}
-
-class NotaMusical extends Obj {
-    constructor(x, y) {
-        super(x, y, 26, 26, 'assets/nota1.png')
-        this.alpha = 1
-        this.dx = (Math.random() - 0.5) * 1.4
-    }
-
-    mov() {
-        this.y -= 1.4
-        this.x += this.dx
-        this.alpha -= 0.012
-    }
-
-    des_obj() {
-        let img = pegaImg(this.at)
-        if (!img.complete || img.naturalWidth === 0) return
-        des.globalAlpha = Math.max(0, this.alpha)
-        des.drawImage(img, this.x, this.y, this.w, this.h)
-        des.globalAlpha = 1
-    }
-}
-
-// ============================================================
-//  VASO E COLETÁVEL (fase 4 + drops)
-// ============================================================
-class Vaso extends Obj {
-    constructor(x, y, w, h, at) {
-        super(x, y, w, h, at)
-        this.temColetavel = false
-        this.quebrado = false
-    }
-}
-
-// ============================================================
-//  FONTE DE INFECÇÃO E POÇA DE ÁCIDO (fase 4)
-// ============================================================
-class Fonte extends Obj {
-    constructor(x, y) {
-        super(x, y, 54, 54, 'assets/fonte.png')
-        this.hp = 6
-        this.t = Math.random() * 4
-    }
-
-    des_obj() {
-        this.t += 0.06
-        let f = Math.floor(this.t) % 4
-        if (!desSprite('assets/fonte_sheet.png', 4, f, this.x, this.y, this.w, this.h)) {
-            let img = pegaImg(this.at)
-            if (img.complete && img.naturalWidth > 0) des.drawImage(img, this.x, this.y, this.w, this.h)
-        }
-        // mini barra de vida da fonte
-        des.fillStyle = '#222'
-        des.fillRect(this.x, this.y - 10, this.w, 6)
-        des.fillStyle = '#9dff3a'
-        des.fillRect(this.x, this.y - 10, this.w * (this.hp / 6), 6)
-    }
-}
-
-class Poca extends Obj {
-    constructor(x, y, w, h) {
-        super(x, y, w, h, null)
-        this.t = Math.random() * 6
-    }
-
-    des_obj() {
-        this.t += 0.06
-        // sprite animado (4 quadros); desenha um pouco maior que a hitbox pra sobrar borda
-        let frame = Math.floor(this.t) % 4
-        if (desSprite('assets/poca_sheet.png', 4, frame, this.x - 8, this.y - 10, this.w + 16, this.h + 20)) return
-        // fallback: borrão procedural enquanto poca.png não existir
-        let alpha = 0.55 + Math.sin(this.t) * 0.15
-        des.fillStyle = 'rgba(150, 190, 40,' + alpha + ')'
-        des.beginPath()
-        des.ellipse(this.x + this.w / 2, this.y + this.h / 2, this.w / 2, this.h / 2, 0, 0, Math.PI * 2)
-        des.fill()
-        des.fillStyle = 'rgba(220, 240, 120, 0.35)'
-        des.beginPath()
-        des.ellipse(this.x + this.w / 2 - 6, this.y + this.h / 2 - 3, this.w / 5, this.h / 5, 0, 0, Math.PI * 2)
-        des.fill()
-    }
-}
-
-// ============================================================
-//  GRANIZO (fase 5)
-// ============================================================
-class Granizo extends Obj {
-    constructor(x, y, w, h, at, vel) {
-        super(x, y, w, h, at)
-        this.vel = vel
-    }
-
-    mov() {
-        this.y += this.vel
-    }
-}
 
 // ---------- cache de imagens ----------
 const _imgs = {}
@@ -221,6 +18,11 @@ function pegaImg(src) {
     return _imgs[src]
 }
 
+// ---------- sistema de som ----------
+function novoAudio(src) {
+    try { return new Audio(src) } catch (e) { return null }
+}
+
 const SONS = {
     tiro:   novoAudio('assets/audios/tiro.wav'),
     dano:   novoAudio('assets/audios/dano.wav'),
@@ -229,6 +31,43 @@ const SONS = {
     porta:  novoAudio('assets/audios/porta.wav'),
     erro:   novoAudio('assets/audios/erro.wav')
 }
+// tiro é repetitivo → mais baixo pra não cansar
+const VOL_SONS = { tiro: 0.2, dano: 0.5, item: 0.5, quebra: 0.55, porta: 0.6, erro: 0.5 }
+for (let k in SONS) { if (SONS[k]) SONS[k].volume = VOL_SONS[k] }
+
+// trilha de fundo + música do boss (loop). "Ducking": a trilha abaixa quando toca um efeito.
+const MUS_VOL = 0.45
+let musica = novoAudio('audios/soundtrack.mp3')
+if (musica) { musica.loop = true; musica.volume = MUS_VOL }
+let musicaBoss = novoAudio('assets/audios/boss.wav')
+if (musicaBoss) { musicaBoss.loop = true; musicaBoss.volume = 0.5 }
+let musDuck = 0
+let musicaComecou = false
+
+function iniciaMusica() {
+    musicaComecou = true
+    if (musica && musica.paused && (!musicaBoss || musicaBoss.paused)) musica.play().catch(() => {})
+}
+function iniciaMusicaBoss() {
+    if (musica) musica.pause()
+    if (musicaBoss) { musicaBoss.currentTime = 0; musicaBoss.play().catch(() => {}) }
+}
+function paraMusicaBoss() {
+    if (musicaBoss && !musicaBoss.paused) {
+        musicaBoss.pause()
+        if (musica && musicaComecou) musica.play().catch(() => {})
+    }
+}
+function duckMusica(frames) {
+    if (frames > musDuck) musDuck = frames
+}
+function atualizaAudio() {
+    if (!musica) return
+    let alvo = musDuck > 0 ? MUS_VOL * 0.28 : MUS_VOL
+    if (musDuck > 0) musDuck -= 1
+    musica.volume += (alvo - musica.volume) * 0.15
+}
+
 function tocaSom(a) {
     if (!a) return
     try {
@@ -237,9 +76,14 @@ function tocaSom(a) {
         duckMusica(18)
     } catch (e) { /* sem áudio, segue o jogo */ }
 }
-// ---------- sistema de som ----------
-function novoAudio(src) {
-    try { return new Audio(src) } catch (e) { return null }
+
+// desenha 1 quadro de um spritesheet horizontal (quadros lado a lado, esquerda→direita)
+function desSprite(src, nFrames, frame, dx, dy, dw, dh) {
+    let img = pegaImg(src)
+    if (!img.complete || img.naturalWidth === 0) return false
+    let fw = img.naturalWidth / nFrames
+    des.drawImage(img, (frame % nFrames) * fw, 0, fw, img.naturalHeight, dx, dy, dw, dh)
+    return true
 }
 
 // ============================================================
@@ -267,28 +111,6 @@ class Obj {
         } else {
             return false
         }
-    }
-}
-
-class Porta extends Obj {
-    constructor(x, y, w, h) {
-        super(x, y, w, h, null)
-        this.t = 0
-    }
-
-    des_obj() {
-        this.t += 0.08
-        let img = pegaImg('assets/porta.png')
-        if (img.complete && img.naturalWidth > 0) {
-            des.drawImage(img, this.x, this.y, this.w, this.h)
-            return
-        }
-        des.fillStyle = '#6e5524'
-        des.fillRect(this.x, this.y, this.w, this.h)
-        des.fillStyle = '#ffd84d'
-        des.globalAlpha = 0.5 + Math.sin(this.t) * 0.3
-        des.fillRect(this.x + 6, this.y + 6, this.w - 12, this.h - 12)
-        des.globalAlpha = 1
     }
 }
 
@@ -419,6 +241,46 @@ class Player extends Obj {
 }
 
 // ============================================================
+//  TIRO DOS JOGADORES (retângulo, igual ao jogo base)
+// ============================================================
+class Tiro extends Obj {
+    constructor(x, y, w, h, cor, dx, dy, dano, dono) {
+        super(x, y, w, h, null)
+        this.cor = cor
+        this.dx = dx
+        this.dy = dy
+        this.dano = dano
+        this.dono = dono
+    }
+
+    des_tiro() {
+        let img = pegaImg('assets/tiro.png')
+        if (img.complete && img.naturalWidth > 0) {
+            // a imagem aponta pra CIMA; gira na direção do disparo
+            let cx = this.x + this.w / 2, cy = this.y + this.h / 2
+            let esp = 10, comp = 26
+            des.save()
+            des.translate(cx, cy)
+            des.rotate(Math.atan2(this.dy, this.dx) + Math.PI / 2)
+            des.drawImage(img, -esp / 2, -comp / 2, esp, comp)
+            des.restore()
+            return
+        }
+        des.fillStyle = this.cor
+        des.fillRect(this.x, this.y, this.w, this.h)
+    }
+
+    mov() {
+        this.x += this.dx
+        this.y += this.dy
+    }
+
+    foraDaTela() {
+        return this.y < -30 || this.y > 700 || this.x < -30 || this.x > 950
+    }
+}
+
+// ============================================================
 //  INIMIGOS (rãs, moscas, gafanhotos)
 // ============================================================
 class Inimigo extends Obj {
@@ -457,45 +319,288 @@ class Inimigo extends Obj {
     }
 }
 
+// ============================================================
+//  BOSS — ANJO DA MORTE
+// ============================================================
+class Boss extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, 'assets/boss_001.png')
+        this.maxVida = 150
+        this.vida = 150
+        this.frame = 0
+        this.frameTimer = 0
+        this.t = 0
+        this.baseX = x
+    }
 
+    mov() {
+        this.t += 1
+        this.x = this.baseX + Math.sin(this.t / 60) * 280
+        this.frameTimer += 1
+        if (this.frameTimer >= 14) {
+            this.frameTimer = 0
+            this.frame = this.frame === 0 ? 1 : 0
+        }
+    }
+
+    des_obj() {
+        let img = pegaImg('assets/boss_' + (this.frame === 0 ? '001' : '002') + '.png')
+        if (img.complete && img.naturalWidth > 0) des.drawImage(img, this.x, this.y, this.w, this.h)
+    }
+}
 
 // ============================================================
-//  TIRO DOS JOGADORES (retângulo, igual ao jogo base)
+//  TIRO DO BOSS (normal e especial — sprites animados)
 // ============================================================
-class Tiro extends Obj {
-    constructor(x, y, w, h, cor, dx, dy, dano, dono) {
+class TiroBoss extends Obj {
+    constructor(x, y, w, h, dx, dy, dano, especial) {
         super(x, y, w, h, null)
-        this.cor = cor
         this.dx = dx
         this.dy = dy
         this.dano = dano
-        this.dono = dono
-    }
-
-    des_tiro() {
-        let img = pegaImg('assets/tiro.png')
-        if (img.complete && img.naturalWidth > 0) {
-            // a imagem aponta pra CIMA; gira na direção do disparo
-            let cx = this.x + this.w / 2, cy = this.y + this.h / 2
-            let esp = 10, comp = 26
-            des.save()
-            des.translate(cx, cy)
-            des.rotate(Math.atan2(this.dy, this.dx) + Math.PI / 2)
-            des.drawImage(img, -esp / 2, -comp / 2, esp, comp)
-            des.restore()
-            return
-        }
-        des.fillStyle = this.cor
-        des.fillRect(this.x, this.y, this.w, this.h)
+        this.especial = especial
+        this.frame = 0
+        this.frameTimer = 0
     }
 
     mov() {
         this.x += this.dx
         this.y += this.dy
+        this.frameTimer += 1
+        if (this.frameTimer >= 8) {
+            this.frameTimer = 0
+            this.frame = this.frame === 0 ? 1 : 0
+        }
     }
 
-    foraDaTela() {
-        return this.y < -30 || this.y > 700 || this.x < -30 || this.x > 950
+    des_obj() {
+        let base = this.especial ? 'assets/bossEspecial_' : 'assets/bossTiro_'
+        des.drawImage(pegaImg(base + (this.frame === 0 ? '001' : '002') + '.png'), this.x, this.y, this.w, this.h)
+    }
+}
+
+// ============================================================
+//  GRANIZO (fase 5)
+// ============================================================
+class Granizo extends Obj {
+    constructor(x, y, w, h, at, vel) {
+        super(x, y, w, h, at)
+        this.vel = vel
+    }
+
+    mov() {
+        this.y += this.vel
+    }
+}
+
+// ============================================================
+//  VASO E COLETÁVEL (fase 4 + drops)
+// ============================================================
+class Vaso extends Obj {
+    constructor(x, y, w, h, at) {
+        super(x, y, w, h, at)
+        this.temColetavel = false
+        this.quebrado = false
+    }
+}
+
+class Coletavel extends Obj {
+    // tipo: 'vida' | 'forca' | 'amuleto' (objetivo da fase 4)
+    constructor(x, y, tipo, cai) {
+        let img = tipo === 'vida' ? 'assets/vida.png'
+            : (tipo === 'forca' ? 'assets/forca.png' : 'assets/coletavel.png')
+        super(x, y, 64, 64, img)
+        this.tipo = tipo
+        this.cai = !!cai
+        this.t = Math.random() * 6
+    }
+
+    mov() {
+        this.t += 0.08
+        if (this.cai) this.x -= 3   // vem pra esquerda, na direção do player
+    }
+
+    des_obj() {
+        let flutua = Math.sin(this.t) * 3
+        if (this.tipo === 'goldencarlos') {
+            des.save()
+            des.shadowColor = '#ffd84d'
+            des.shadowBlur = 18
+            des.drawImage(pegaImg(this.at), this.x, this.y + flutua, this.w, this.h)
+            des.restore()
+            return
+        }
+        des.drawImage(pegaImg(this.at), this.x, this.y + flutua, this.w, this.h)
+    }
+}
+
+// ============================================================
+//  FONTE DE INFECÇÃO E POÇA DE ÁCIDO (fase 4)
+// ============================================================
+class Fonte extends Obj {
+    constructor(x, y) {
+        super(x, y, 54, 54, 'assets/fonte.png')
+        this.hp = 6
+        this.t = Math.random() * 4
+    }
+
+    des_obj() {
+        this.t += 0.06
+        let f = Math.floor(this.t) % 4
+        if (!desSprite('assets/fonte_sheet.png', 4, f, this.x, this.y, this.w, this.h)) {
+            let img = pegaImg(this.at)
+            if (img.complete && img.naturalWidth > 0) des.drawImage(img, this.x, this.y, this.w, this.h)
+        }
+        // mini barra de vida da fonte
+        des.fillStyle = '#222'
+        des.fillRect(this.x, this.y - 10, this.w, 6)
+        des.fillStyle = '#9dff3a'
+        des.fillRect(this.x, this.y - 10, this.w * (this.hp / 6), 6)
+    }
+}
+
+class Poca extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, null)
+        this.t = Math.random() * 6
+    }
+
+    des_obj() {
+        this.t += 0.06
+        // sprite animado (4 quadros); desenha um pouco maior que a hitbox pra sobrar borda
+        let frame = Math.floor(this.t) % 4
+        if (desSprite('assets/poca_sheet.png', 4, frame, this.x - 8, this.y - 10, this.w + 16, this.h + 20)) return
+        // fallback: borrão procedural enquanto poca.png não existir
+        let alpha = 0.55 + Math.sin(this.t) * 0.15
+        des.fillStyle = 'rgba(150, 190, 40,' + alpha + ')'
+        des.beginPath()
+        des.ellipse(this.x + this.w / 2, this.y + this.h / 2, this.w / 2, this.h / 2, 0, 0, Math.PI * 2)
+        des.fill()
+        des.fillStyle = 'rgba(220, 240, 120, 0.35)'
+        des.beginPath()
+        des.ellipse(this.x + this.w / 2 - 6, this.y + this.h / 2 - 3, this.w / 5, this.h / 5, 0, 0, Math.PI * 2)
+        des.fill()
+    }
+}
+
+// ============================================================
+//  PAREDE (grades de ferro dos labirintos) E PORTA
+// ============================================================
+class Parede extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, null)
+    }
+
+    des_obj() {
+        let img = pegaImg('assets/muro.png')
+        if (img.complete && img.naturalWidth > 0) {
+            if (!Parede._pat) {
+                let tile = document.createElement('canvas')
+                tile.width = 220; tile.height = 220
+                tile.getContext('2d').drawImage(img, 0, 0, 220, 220)
+                Parede._pat = des.createPattern(tile, 'repeat')
+            }
+            des.save()
+            des.beginPath()
+            des.rect(this.x, this.y, this.w, this.h)
+            des.clip()
+            des.fillStyle = Parede._pat
+            des.fillRect(this.x, this.y, this.w, this.h)
+            des.restore()
+            return
+        }
+        des.fillStyle = '#2c2c33'
+        des.fillRect(this.x, this.y, this.w, this.h)
+        des.strokeStyle = '#55555f'
+        des.lineWidth = 1
+        if (this.w > this.h) {
+            for (let i = this.x + 8; i < this.x + this.w; i += 16) {
+                des.beginPath()
+                des.moveTo(i, this.y)
+                des.lineTo(i, this.y + this.h)
+                des.stroke()
+            }
+        } else {
+            for (let i = this.y + 8; i < this.y + this.h; i += 16) {
+                des.beginPath()
+                des.moveTo(this.x, i)
+                des.lineTo(this.x + this.w, i)
+                des.stroke()
+            }
+        }
+    }
+}
+
+class Porta extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, null)
+        this.t = 0
+    }
+
+    des_obj() {
+        this.t += 0.08
+        let img = pegaImg('assets/porta.png')
+        if (img.complete && img.naturalWidth > 0) {
+            des.drawImage(img, this.x, this.y, this.w, this.h)
+            return
+        }
+        des.fillStyle = '#6e5524'
+        des.fillRect(this.x, this.y, this.w, this.h)
+        des.fillStyle = '#ffd84d'
+        des.globalAlpha = 0.5 + Math.sin(this.t) * 0.3
+        des.fillRect(this.x + 6, this.y + 6, this.w - 12, this.h - 12)
+        des.globalAlpha = 1
+    }
+}
+
+// ============================================================
+//  HARPA E NOTA MUSICAL (fase 1)
+// ============================================================
+class Harpa extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, 'assets/harpa_001.png')
+        this.tocando = 0
+        this.frame = 0
+        this.frameTimer = 0
+    }
+
+    atual() {
+        if (this.tocando > 0) {
+            this.tocando -= 1
+            this.frameTimer += 1
+            if (this.frameTimer >= 6) {
+                this.frameTimer = 0
+                this.frame = this.frame === 0 ? 1 : 0
+            }
+        } else {
+            this.frame = 0
+        }
+    }
+
+    des_obj() {
+        des.drawImage(pegaImg('assets/harpa_' + (this.frame === 0 ? '001' : '002') + '.png'), this.x, this.y, this.w, this.h)
+    }
+}
+
+class NotaMusical extends Obj {
+    constructor(x, y) {
+        super(x, y, 26, 26, 'assets/nota1.png')
+        this.alpha = 1
+        this.dx = (Math.random() - 0.5) * 1.4
+    }
+
+    mov() {
+        this.y -= 1.4
+        this.x += this.dx
+        this.alpha -= 0.012
+    }
+
+    des_obj() {
+        let img = pegaImg(this.at)
+        if (!img.complete || img.naturalWidth === 0) return
+        des.globalAlpha = Math.max(0, this.alpha)
+        des.drawImage(img, this.x, this.y, this.w, this.h)
+        des.globalAlpha = 1
     }
 }
 
@@ -572,115 +677,4 @@ function quebraTexto(texto, maxLarg, font) {
     })
     if (atual !== '') linhas.push(atual)
     return linhas
-}
-
-// tiro é repetitivo → mais baixo pra não cansar
-const VOL_SONS = { tiro: 0.2, dano: 0.5, item: 0.5, quebra: 0.55, porta: 0.6, erro: 0.5 }
-
-// trilha de fundo + música do boss (loop). "Ducking": a trilha abaixa quando toca um efeito.
-const MUS_VOL = 0.45
-
-let musica = novoAudio('audios/soundtrack.mp3')
-
-let musicaBoss = novoAudio('assets/audios/boss.wav')
-
-let musDuck = 0
-
-let musicaComecou = false
-
-function iniciaMusica() {
-    musicaComecou = true
-    if (musica && musica.paused && (!musicaBoss || musicaBoss.paused)) musica.play().catch(() => {})
-}
-
-function iniciaMusicaBoss() {
-    if (musica) musica.pause()
-    if (musicaBoss) { musicaBoss.currentTime = 0; musicaBoss.play().catch(() => {}) }
-}
-
-function paraMusicaBoss() {
-    if (musicaBoss && !musicaBoss.paused) {
-        musicaBoss.pause()
-        if (musica && musicaComecou) musica.play().catch(() => {})
-    }
-}
-
-function duckMusica(frames) {
-    if (frames > musDuck) musDuck = frames
-}
-
-function atualizaAudio() {
-    if (!musica) return
-    let alvo = musDuck > 0 ? MUS_VOL * 0.28 : MUS_VOL
-    if (musDuck > 0) musDuck -= 1
-    musica.volume += (alvo - musica.volume) * 0.15
-}
-
-// ============================================================
-//  BOSS — ANJO DA MORTE
-// ============================================================
-class Boss extends Obj {
-    constructor(x, y, w, h) {
-        super(x, y, w, h, 'assets/boss_001.png')
-        this.maxVida = 150
-        this.vida = 150
-        this.frame = 0
-        this.frameTimer = 0
-        this.t = 0
-        this.baseX = x
-    }
-
-    mov() {
-        this.t += 1
-        this.x = this.baseX + Math.sin(this.t / 60) * 280
-        this.frameTimer += 1
-        if (this.frameTimer >= 14) {
-            this.frameTimer = 0
-            this.frame = this.frame === 0 ? 1 : 0
-        }
-    }
-
-    des_obj() {
-        let img = pegaImg('assets/boss_' + (this.frame === 0 ? '001' : '002') + '.png')
-        if (img.complete && img.naturalWidth > 0) des.drawImage(img, this.x, this.y, this.w, this.h)
-    }
-}
-
-// ============================================================
-//  TIRO DO BOSS (normal e especial — sprites animados)
-// ============================================================
-class TiroBoss extends Obj {
-    constructor(x, y, w, h, dx, dy, dano, especial) {
-        super(x, y, w, h, null)
-        this.dx = dx
-        this.dy = dy
-        this.dano = dano
-        this.especial = especial
-        this.frame = 0
-        this.frameTimer = 0
-    }
-
-    mov() {
-        this.x += this.dx
-        this.y += this.dy
-        this.frameTimer += 1
-        if (this.frameTimer >= 8) {
-            this.frameTimer = 0
-            this.frame = this.frame === 0 ? 1 : 0
-        }
-    }
-
-    des_obj() {
-        let base = this.especial ? 'assets/bossEspecial_' : 'assets/bossTiro_'
-        des.drawImage(pegaImg(base + (this.frame === 0 ? '001' : '002') + '.png'), this.x, this.y, this.w, this.h)
-    }
-}
-
-// desenha 1 quadro de um spritesheet horizontal (quadros lado a lado, esquerda→direita)
-function desSprite(src, nFrames, frame, dx, dy, dw, dh) {
-    let img = pegaImg(src)
-    if (!img.complete || img.naturalWidth === 0) return false
-    let fw = img.naturalWidth / nFrames
-    des.drawImage(img, (frame % nFrames) * fw, 0, fw, img.naturalHeight, dx, dy, dw, dh)
-    return true
 }
