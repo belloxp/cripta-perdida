@@ -189,6 +189,9 @@ class Poca extends Obj {
     }
 }
 
+// ============================================================
+//  GRANIZO (fase 5)
+// ============================================================
 class Granizo extends Obj {
     constructor(x, y, w, h, at, vel) {
         super(x, y, w, h, at)

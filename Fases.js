@@ -552,22 +552,30 @@ let fase4 = {
     }
 }
 
+// ============================================================
+//  FASE 5 — CHUVA DE GRANIZO
+//  Desviar das pedras + segurar ESPAÇO na zona do mecanismo
+//  para encher a barra (portão abrindo)
+// ============================================================
 let fase5 = {
-    nome: 'PRAGA VII — Chuva de Granizo',
+    nome: 'PRAGA VII \u2014 Chuva de Granizo',
     init() {
         this.completa = false
         this.grupoGranizos = []
         this.time1 = 0
-        this.barra = 0
-        this.zona = { x: LARG / 2 - 80, y: 90, w: 160, h: 110 }
+        this.barra = 0 // 0..100
+        this.zona = { x: 374, y: 440, w: 150, h: 130 }     // chão, centralizada na frente do portão
+        this.portao = { x: 406, y: 246, w: 87, h: 188 }    // abertura exata da porta na arte do fundo
         p1.x = 240; p1.y = ALT - 120; p1.facing = 'dir'
         p2.x = 620; p2.y = ALT - 120; p2.facing = 'esq'
     },
     atual() {
-        let area = { x: 10, y: 70, w: LARG - 20, h: ALT - 82, vert: true }
+        // players só andam na faixa do chão (a parede termina em ~y 435)
+        let area = { x: 10, y: 390, w: LARG - 20, h: ALT - 402, vert: true }
         players.forEach((pl) => {
             pl.atualizaTimers()
             pl.mov(area)
+            // dentro da zona segurando ESPAÇO → alimenta a barra
             if (pl.vivo && teclas[' '] &&
                 pl.x + pl.w > this.zona.x && pl.x < this.zona.x + this.zona.w &&
                 pl.y + pl.h > this.zona.y && pl.y < this.zona.y + this.zona.h) {
@@ -575,6 +583,7 @@ let fase5 = {
             }
         })
 
+        // spawn de granizo
         this.time1 += 1
         if (this.time1 >= 16) {
             this.time1 = 0
@@ -608,9 +617,19 @@ let fase5 = {
     des() {
         desFundo(5)
 
-        let abertura = (this.barra / 100) * 70
-        des.fillStyle = '#54452a'
-        des.fillRect(this.zona.x + 20, this.zona.y - 70 + abertura, this.zona.w - 40, 70 - abertura)
+        // porta de pedra (imagem) sobe conforme a barra enche, presa dentro da abertura
+        let porta = pegaImg('assets/portaoFase5.png')
+        if (porta.complete && porta.naturalWidth > 0) {
+            let p = this.portao
+            des.save()
+            des.beginPath()
+            des.rect(p.x, p.y, p.w, p.h)
+            des.clip()
+            des.drawImage(porta, p.x, p.y - (this.barra / 100) * p.h, p.w, p.h)
+            des.restore()
+        }
+
+        // zona do mecanismo
         des.strokeStyle = '#ffd84d'
         des.lineWidth = 2
         des.setLineDash([8, 6])
@@ -621,14 +640,14 @@ let fase5 = {
         des.fillStyle = '#ffd84d'
         des.font = 'bold 13px monospace'
         des.textAlign = 'center'
-        des.fillText('SEGURE [ESPAÇO]', this.zona.x + this.zona.w / 2, this.zona.y + this.zona.h / 2)
+        des.fillText('SEGURE [ESPA\u00C7O]', this.zona.x + this.zona.w / 2, this.zona.y + this.zona.h / 2)
         des.textAlign = 'left'
 
         this.grupoGranizos.forEach((g) => { g.des_obj() })
         players.forEach((pl) => { pl.des_obj() })
 
         let barra = new BarraProgresso()
-        barra.des(LARG / 2 - 150, 70, 300, 20, this.barra / 100, '#2a2118', '#c4943a', 'PORTÃO: ' + Math.floor(this.barra) + '%')
+        barra.des(LARG / 2 - 150, 70, 300, 20, this.barra / 100, '#2a2118', '#c4943a', 'PORT\u00C3O: ' + Math.floor(this.barra) + '%')
     }
 }
 
