@@ -16,17 +16,17 @@ const ONDAS = [
     {
         nome: 'PRAGAS', fundo: 2, tipo: 'tiro', meta: 15,
         spawns: [
-            { sprites: ['assets/ra1.png'], sheet: 'assets/ra_sheet.png', frames: 3, w: 84, h: 44, vel: [3, 4.5], intervalo: 100, sway: 0 },
-            { sprites: ['assets/moscas1.png'], sheet: 'assets/mosquito_sheet.png', frames: 3, w: 62, h: 56, vel: [4, 6], intervalo: 75, sway: 2.2 },
-            { sprites: ['assets/moscas1.png'], sheet: 'assets/mosca_sheet.png', frames: 3, w: 68, h: 72, vel: [3, 4.5], intervalo: 95, sway: 1.4 }
+            { sheet: 'assets/ra_sheet.png', frames: 3, w: 84, h: 44, vel: [3, 4.5], intervalo: 100, sway: 0 },
+            { sheet: 'assets/mosquito_sheet.png', frames: 3, w: 62, h: 56, vel: [4, 6], intervalo: 75, sway: 2.2 },
+            { sheet: 'assets/mosca_sheet.png', frames: 3, w: 68, h: 72, vel: [3, 4.5], intervalo: 95, sway: 1.4 }
         ]
     },
     { nome: 'GRANIZO', fundo: 5, tipo: 'chuva', tempo: 1200 },
     {
         nome: 'GAFANHOTOS', fundo: 6, tipo: 'tiro', meta: 18,
         spawns: [
-            { sprites: ['assets/gafanhotos1.png'], sheet: 'assets/gafanhoto_sheet.png', frames: 3, w: 66, h: 48, vel: [4, 6], intervalo: 36, sway: 1.6, anim: 0.05 },
-            { sprites: ['assets/gafanhotos1.png'], sheet: 'assets/gafanhoto_sheet.png', frames: 3, w: 80, h: 58, vel: [3, 4.5], intervalo: 85, sway: 0.8, hp: 2, anim: 0.05 }
+            { sheet: 'assets/gafanhoto_sheet.png', frames: 3, w: 66, h: 48, vel: [4, 6], intervalo: 36, sway: 1.6, anim: 0.05 },
+            { sheet: 'assets/gafanhoto_sheet.png', frames: 3, w: 80, h: 58, vel: [3, 4.5], intervalo: 85, sway: 0.8, hp: 2, anim: 0.05 }
         ]
     }
 ]
@@ -79,6 +79,7 @@ let sobrevivencia = {
             pl.invul = 0
             pl.tiroTimer = 0
             pl.cooldown = 0
+            pl.vel = 4
         })
         p1.x = 130; p1.y = ARENA_TOPO + 20; p1.facing = 'dir'
         p2.x = 130; p2.y = ARENA_TOPO + 150; p2.facing = 'dir'
@@ -100,7 +101,7 @@ let sobrevivencia = {
                 this.timers[i] = 0
                 let posY = ARENA_TOPO + Math.random() * (ARENA_BASE - ARENA_TOPO - s.h)
                 let vel = (Math.random() * (s.vel[1] - s.vel[0]) + s.vel[0]) * d
-                this.grupoInimigos.push(new Inimigo(LARG + 20, posY, s.w, s.h, s.sprites[0], vel, s.hp || 1, s.sway, s.sheet, s.frames, s.anim))
+                this.grupoInimigos.push(new Inimigo(LARG + 20, posY, s.w, s.h, null, vel, s.hp || 1, s.sway, s.sheet, s.frames, s.anim))
             }
         })
     },
