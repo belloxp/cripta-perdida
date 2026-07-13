@@ -12,9 +12,10 @@ body {
 }
 
 canvas {
-    /* preenche a tela mantendo a proporção 3:2 (letterbox nas laterais/topo) */
-    width: min(100vw, 150vh);
-    height: min(66.6667vw, 100vh);
+    /* tela inteira sem borda preta e sem cortar nada (estica levemente se a proporção divergir) */
+    width: 100vw;
+    height: 100vh;
+    object-fit: fill;
     background: #000;
     display: block;
 }

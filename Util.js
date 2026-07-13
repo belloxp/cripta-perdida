@@ -185,7 +185,15 @@ class Player extends Obj {
     des_obj() {
         if (!this.vivo) return
         if (this.invul > 0 && Math.floor(this.invul / 4) % 2 === 0) return // pisca
-        des.drawImage(pegaImg(this.spriteAtual()), this.x, this.y, this.w, this.h)
+        let img = pegaImg(this.spriteAtual())
+        let dw = this.w
+        // o sprite de tiro é mais largo (braço estendido): mantém o corpo no
+        // mesmo tamanho e deixa o braço passar da hitbox
+        if (this.tiroTimer > 0 && img.naturalHeight > 0) {
+            dw = this.h * img.naturalWidth / img.naturalHeight
+        }
+        let dx = this.facing === 'esq' ? this.x + this.w - dw : this.x
+        des.drawImage(img, dx, this.y, dw, this.h)
     }
 
     // area = {x, y, w, h, vert}  |  paredes = [Parede] (opcional)
@@ -259,7 +267,8 @@ class Player extends Obj {
     // modo: 'cima' (fases de chuva de inimigos / boss) ou 'lado' (labirinto)
     atira(grupo, modo) {
         if (!this.vivo || this.cooldown > 0) return
-        this.cooldown = 18
+        // duelo pede ritmo de faroeste; nas fases de horda o tiro flui mais
+        this.cooldown = (typeof estado !== 'undefined' && estado === 'PVP') ? 45 : 22
         this.tiroTimer = 14
         if (modo === 'cima') {
             grupo.push(new Tiro(this.x + this.w / 2 - 4, this.y - 6, 8, 16, '#ffd84d', 0, -10, this.forca, this))
@@ -286,20 +295,14 @@ class Tiro extends Obj {
     }
 
     des_tiro() {
-        let img = pegaImg('assets/tiro.png')
-        if (img.complete && img.naturalWidth > 0) {
-            // a imagem aponta pra CIMA; gira na direção do disparo
-            let cx = this.x + this.w / 2, cy = this.y + this.h / 2
-            let esp = 10, comp = 26
-            des.save()
-            des.translate(cx, cy)
-            des.rotate(Math.atan2(this.dy, this.dx) + Math.PI / 2)
-            des.drawImage(img, -esp / 2, -comp / 2, esp, comp)
-            des.restore()
-            return
-        }
-        des.fillStyle = this.cor
-        des.fillRect(this.x, this.y, this.w, this.h)
+        // a imagem aponta pra CIMA; gira na direção do disparo
+        let cx = this.x + this.w / 2, cy = this.y + this.h / 2
+        let esp = 8, comp = 20
+        des.save()
+        des.translate(cx, cy)
+        des.rotate(Math.atan2(this.dy, this.dx) + Math.PI / 2)
+        des.drawImage(pegaImg('assets/tiro.png'), -esp / 2, -comp / 2, esp, comp)
+        des.restore()
     }
 
     mov() {
@@ -341,12 +344,7 @@ class Inimigo extends Obj {
         des.save()
         des.translate(this.x + this.w, this.y)
         des.scale(-1, 1)
-        if (this.sheet) {
-            let f = Math.floor(this.animT) % this.frames
-            if (desSprite(this.sheet, this.frames, f, 0, 0, this.w, this.h)) { des.restore(); return }
-        }
-        let img = pegaImg(this.at)
-        if (img.complete && img.naturalWidth > 0) des.drawImage(img, 0, 0, this.w, this.h)
+        desSprite(this.sheet, this.frames, Math.floor(this.animT) % this.frames, 0, 0, this.w, this.h)
         des.restore()
     }
 }
@@ -376,8 +374,7 @@ class Boss extends Obj {
     }
 
     des_obj() {
-        let img = pegaImg('assets/boss_' + (this.frame === 0 ? '001' : '002') + '.png')
-        if (img.complete && img.naturalWidth > 0) des.drawImage(img, this.x, this.y, this.w, this.h)
+        des.drawImage(pegaImg('assets/boss_' + (this.frame === 0 ? '001' : '002') + '.png'), this.x, this.y, this.w, this.h)
     }
 }
 
@@ -479,10 +476,7 @@ class Fonte extends Obj {
     des_obj() {
         this.t += 0.06
         let f = Math.floor(this.t) % 4
-        if (!desSprite('assets/fonte_sheet.png', 4, f, this.x, this.y, this.w, this.h)) {
-            let img = pegaImg(this.at)
-            if (img.complete && img.naturalWidth > 0) des.drawImage(img, this.x, this.y, this.w, this.h)
-        }
+        desSprite('assets/fonte_sheet.png', 4, f, this.x, this.y, this.w, this.h)
         // mini barra de vida da fonte
         des.fillStyle = '#222'
         des.fillRect(this.x, this.y - 10, this.w, 6)
@@ -501,17 +495,7 @@ class Poca extends Obj {
         this.t += 0.06
         // sprite animado (4 quadros); desenha um pouco maior que a hitbox pra sobrar borda
         let frame = Math.floor(this.t) % 4
-        if (desSprite('assets/poca_sheet.png', 4, frame, this.x - 8, this.y - 10, this.w + 16, this.h + 20)) return
-        // fallback: borrão procedural enquanto poca.png não existir
-        let alpha = 0.55 + Math.sin(this.t) * 0.15
-        des.fillStyle = 'rgba(150, 190, 40,' + alpha + ')'
-        des.beginPath()
-        des.ellipse(this.x + this.w / 2, this.y + this.h / 2, this.w / 2, this.h / 2, 0, 0, Math.PI * 2)
-        des.fill()
-        des.fillStyle = 'rgba(220, 240, 120, 0.35)'
-        des.beginPath()
-        des.ellipse(this.x + this.w / 2 - 6, this.y + this.h / 2 - 3, this.w / 5, this.h / 5, 0, 0, Math.PI * 2)
-        des.fill()
+        desSprite('assets/poca_sheet.png', 4, frame, this.x - 8, this.y - 10, this.w + 16, this.h + 20)
     }
 }
 
@@ -539,26 +523,6 @@ class Parede extends Obj {
             des.fillStyle = Parede._pat
             des.fillRect(this.x, this.y, this.w, this.h)
             des.restore()
-            return
-        }
-        des.fillStyle = '#2c2c33'
-        des.fillRect(this.x, this.y, this.w, this.h)
-        des.strokeStyle = '#55555f'
-        des.lineWidth = 1
-        if (this.w > this.h) {
-            for (let i = this.x + 8; i < this.x + this.w; i += 16) {
-                des.beginPath()
-                des.moveTo(i, this.y)
-                des.lineTo(i, this.y + this.h)
-                des.stroke()
-            }
-        } else {
-            for (let i = this.y + 8; i < this.y + this.h; i += 16) {
-                des.beginPath()
-                des.moveTo(this.x, i)
-                des.lineTo(this.x + this.w, i)
-                des.stroke()
-            }
         }
     }
 }
@@ -570,18 +534,7 @@ class Porta extends Obj {
     }
 
     des_obj() {
-        this.t += 0.08
-        let img = pegaImg('assets/porta.png')
-        if (img.complete && img.naturalWidth > 0) {
-            des.drawImage(img, this.x, this.y, this.w, this.h)
-            return
-        }
-        des.fillStyle = '#6e5524'
-        des.fillRect(this.x, this.y, this.w, this.h)
-        des.fillStyle = '#ffd84d'
-        des.globalAlpha = 0.5 + Math.sin(this.t) * 0.3
-        des.fillRect(this.x + 6, this.y + 6, this.w - 12, this.h - 12)
-        des.globalAlpha = 1
+        des.drawImage(pegaImg('assets/porta.png'), this.x, this.y, this.w, this.h)
     }
 }
 
