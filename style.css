@@ -12,10 +12,10 @@ body {
 }
 
 canvas {
-    /* cobre a tela inteira sem borda preta (o excesso é cortado, igual ao jogo base) */
+    /* tela inteira sem borda preta e sem cortar nada (estica levemente se a proporção divergir) */
     width: 100vw;
     height: 100vh;
-    object-fit: cover;
+    object-fit: fill;
     background: #000;
     display: block;
 }
