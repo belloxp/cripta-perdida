@@ -295,21 +295,29 @@ const MENU_MODOS = [
 ]
 let menuSel = 0
 let menuAberto = false   // JOGAR aberto mostrando os modos embaixo
+let menuAnim = 0         // 0 fechado → 1 aberto (easing no desHome, dá a transição)
 let menuConfirma = -1    // modo esperando confirmação no modal (-1 = nenhum)
 let confirmaSel = 0      // 0 = SIM | 1 = NAO
 const MENU_X = 64
 
-// lista atual do menu (muda quando JOGAR está aberto)
+// lista atual do menu; posições consideram a animação de abertura do JOGAR
 function menuItens() {
     let itens = [{ t: 'JOGAR', tipo: 'jogar' }]
     if (menuAberto) MENU_MODOS.forEach((m, i) => itens.push({ t: m.t, tipo: 'modo', modo: i, sub: true }))
     itens.push({ t: 'MANUAL', tipo: 'manual' })
     itens.push({ t: 'EQUIPE', tipo: 'equipe' })
-    let y = 272
-    itens.forEach((it, i) => {
-        if (i > 0 && !it.sub && itens[i - 1].sub) y += 18 // respiro depois do grupo de modos
-        it.y = y
-        y += it.sub ? 40 : 48
+    let blocoSub = (MENU_MODOS.length * 44 + 18) * menuAnim
+    let extra = 0
+    itens.forEach((it) => {
+        if (it.tipo === 'jogar') {
+            it.y = 272
+        } else if (it.sub) {
+            it.y = 272 + 54 + it.modo * 44 - (1 - menuAnim) * 16 // desliza de cima
+            it.alpha = menuAnim
+        } else {
+            it.y = 272 + 54 + blocoSub + extra * 52
+            extra += 1
+        }
     })
     return itens
 }
@@ -374,8 +382,10 @@ function desHome() {
     let logo = pegaImg('assets/icon.png')
     des.textAlign = 'left'
     if (logo.complete && logo.naturalWidth > 0) {
-        let lh = 120
-        des.drawImage(logo, MENU_X - 6, 52, lh * logo.naturalWidth / logo.naturalHeight, lh)
+        let lh = 175
+        let lw = lh * logo.naturalWidth / logo.naturalHeight
+        if (lw > 470) { lw = 470; lh = lw * logo.naturalHeight / logo.naturalWidth }
+        des.drawImage(logo, MENU_X - 6, 44, lw, lh)
     } else if (temFundoNovo) {
         des.fillStyle = '#ffd84d'
         des.font = '26px "Press Start 2P", monospace'
@@ -383,20 +393,31 @@ function desHome() {
         des.fillText('PERDIDA', MENU_X, 144)
     }
 
+    // easing da abertura do JOGAR
+    let alvoAnim = menuAberto ? 1 : 0
+    menuAnim += (alvoAnim - menuAnim) * 0.22
+    if (Math.abs(alvoAnim - menuAnim) < 0.01) menuAnim = alvoAnim
+
     let itens = menuItens()
     itens.forEach((it, i) => {
         let sel = menuSel === i && menuConfirma < 0
-        let x = MENU_X + (it.sub ? 30 : 0)
-        des.font = (sel ? '30px' : '26px') + ' VT323, monospace'
+        let x = MENU_X + (it.sub ? 26 : 0) + (sel ? 10 : 0)
+        des.save()
+        if (it.alpha !== undefined) des.globalAlpha = it.alpha
+        des.letterSpacing = '3px'
+        des.font = (sel ? '700 ' : '500 ') + (it.sub ? (sel ? '21px' : '19px') : (sel ? '24px' : '21px')) + ' Cinzel, serif'
         des.fillStyle = sel ? '#ffd84d' : (it.sub ? '#9c8c66' : '#b7a67e')
-        if (sel) des.fillText('►', x - 26, it.y)
-        let rotulo = it.tipo === 'jogar' ? (menuAberto ? 'JOGAR ▾' : 'JOGAR') : it.t
+        let rotulo = it.tipo === 'jogar' ? (menuAberto ? 'JOGAR —' : 'JOGAR') : it.t
         des.fillText(rotulo, x, it.y)
+        des.restore()
     })
 
-    des.font = '18px VT323, monospace'
+    des.save()
+    des.letterSpacing = '2px'
+    des.font = '500 13px Cinzel, serif'
     des.fillStyle = '#8a7a58'
-    des.fillText('SETAS ESCOLHEM   ENTER CONFIRMA', MENU_X, ALT - 28)
+    des.fillText('SETAS ESCOLHEM      ENTER CONFIRMA', MENU_X, ALT - 28)
+    des.restore()
 
     // modal de confirmação
     if (menuConfirma >= 0) {
@@ -409,12 +430,15 @@ function desHome() {
         des.lineWidth = 2
         des.strokeRect(bx, by, bw, bh)
         des.textAlign = 'center'
+        des.save()
+        des.letterSpacing = '3px'
         des.fillStyle = '#d9c9a0'
-        des.font = '24px VT323, monospace'
-        des.fillText('INICIAR', LARG / 2, by + 44)
+        des.font = '500 15px Cinzel, serif'
+        des.fillText('INICIAR', LARG / 2, by + 42)
         des.fillStyle = '#ffd84d'
-        des.font = '32px VT323, monospace'
+        des.font = '700 26px Cinzel, serif'
         des.fillText(MENU_MODOS[menuConfirma].t, LARG / 2, by + 80)
+        des.restore()
         ;['SIM', 'NAO'].forEach((txt, n) => {
             let r = confirmaRect(n)
             let sel = confirmaSel === n
@@ -423,8 +447,8 @@ function desHome() {
             des.strokeStyle = sel ? '#ffd84d' : '#5a4322'
             des.strokeRect(r.x, r.y, r.w, r.h)
             des.fillStyle = sel ? '#ffd84d' : '#9c8c66'
-            des.font = '26px VT323, monospace'
-            des.fillText(txt, r.x + r.w / 2, r.y + 30)
+            des.font = '700 18px Cinzel, serif'
+            des.fillText(txt, r.x + r.w / 2, r.y + 29)
         })
         des.textAlign = 'left'
     }
