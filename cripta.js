@@ -37,13 +37,28 @@ document.addEventListener('keyup', (ev) => {
     let k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key
     teclas[k] = false
 })
+// posição do mouse em coordenadas do jogo (0..LARG / 0..ALT) — usada no hover dos botões
+let mouseX = -1
+let mouseY = -1
+_cv.addEventListener('mousemove', (ev) => {
+    let r = _cv.getBoundingClientRect()
+    mouseX = (ev.clientX - r.left) / r.width * LARG
+    mouseY = (ev.clientY - r.top) / r.height * ALT
+    let emCima = estado === 'HOME' &&
+        (dentroDe(mouseX, mouseY, btnJogar) || dentroDe(mouseX, mouseY, btnManual) || dentroDe(mouseX, mouseY, btnSobre))
+    _cv.style.cursor = emCima ? 'pointer' : 'default'
+})
+_cv.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1 })
+
 _cv.addEventListener('click', (ev) => {
+    iniciaMusica() // clique também é interação: libera o áudio
     let r = _cv.getBoundingClientRect()
     let mx = (ev.clientX - r.left) / r.width * LARG
     let my = (ev.clientY - r.top) / r.height * ALT
     if (estado === 'HOME') {
-        if (dentroDe(mx, my, btnJogar)) avancaFluxo()
-        else if (dentroDe(mx, my, btnManual)) abreManual()
+        if (dentroDe(mx, my, btnJogar)) { tocaSom(SONS.click); avancaFluxo() }
+        else if (dentroDe(mx, my, btnManual)) { tocaSom(SONS.click); abreManual() }
+        else if (dentroDe(mx, my, btnSobre)) { tocaSom(SONS.click); abreSobre() }
     }
 })
 
@@ -77,6 +92,7 @@ let piscaTimer = 0
 
 function avancaFluxo() {
     paraMusicaBoss()
+    if (estado === 'HOME') tocaFaixa('jogo') // saiu do menu: intro → trilha das fases
     fluxoIdx += 1
     if (fluxoIdx >= FLUXO.length) { voltaPraHome(); return }
     let item = FLUXO[fluxoIdx]
@@ -126,7 +142,7 @@ function reiniciaFase() {
 }
 
 function voltaPraHome() {
-    paraMusicaBoss()
+    tocaFaixa('menu') // de volta ao menu: toca a intro
     estado = 'HOME'
     fluxoIdx = -1
     efeitos = []
@@ -144,13 +160,27 @@ function voltaPraHome() {
 
 // ---------- roteamento de teclas apertadas (não contínuas) ----------
 function aoApertar(k) {
-    if (k === 'Escape') { fechaManual(); return }
+    if (k === 'Escape') {
+        if (overlayAberto()) tocaSom(SONS.click)
+        fechaManual()
+        fechaSobre()
+        return
+    }
+    // com um overlay aberto, o jogo não recebe teclas
+    if (overlayAberto()) return
     if (estado === 'HOME' && k === 'Enter') {
+        tocaSom(SONS.click)
         avancaFluxo()
         return
     }
     if (estado === 'HOME' && k === 'm') {
+        tocaSom(SONS.click)
         abreManual()
+        return
+    }
+    if (estado === 'HOME' && k === 'n') {
+        tocaSom(SONS.click)
+        abreSobre()
         return
     }
     if (estado === 'CARREGANDO' && k === 'Enter' && telaDica.prog >= 100) {
@@ -227,37 +257,128 @@ function desPainelPlayer(pl, x, nome, cor, invertido) {
 //  TELA INICIAL
 // ============================================================
 // ---------- botões da tela inicial ----------
-const btnJogar = { x: LARG / 2 - 130, y: 395, w: 260, h: 62 }
-const btnManual = { x: LARG / 2 - 130, y: 472, w: 260, h: 50 }
+// abaixo do sol da arte (o sol termina por volta de y=390) e acima do rodapé
+const btnJogar = { x: LARG / 2 - 118, y: 404, w: 236, h: 50 }
+const btnManual = { x: LARG / 2 - 118, y: 462, w: 236, h: 40 }
+const btnSobre = { x: LARG / 2 - 118, y: 510, w: 236, h: 40 }
 
 function dentroDe(mx, my, b) {
     return mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h
 }
 
-function desBotao(b, txt, cor) {
-    des.fillStyle = 'rgba(20, 14, 8, 0.88)'
-    des.fillRect(b.x, b.y, b.w, b.h)
-    des.strokeStyle = cor
+// caminho de retângulo com cantos cortados (a forma das placas/estelas egípcias)
+function caminhoChanfrado(x, y, w, h, c) {
+    des.beginPath()
+    des.moveTo(x + c, y)
+    des.lineTo(x + w - c, y)
+    des.lineTo(x + w, y + c)
+    des.lineTo(x + w, y + h - c)
+    des.lineTo(x + w - c, y + h)
+    des.lineTo(x + c, y + h)
+    des.lineTo(x, y + h - c)
+    des.lineTo(x, y + c)
+    des.closePath()
+}
+
+// estela de basalto: cantos chanfrados, filete dourado e texto em pixel font
+function desBotao(b, txt, tam) {
+    let f = tam || 15
+    let hover = dentroDe(mouseX, mouseY, b)
+    let y = b.y + (hover ? 2 : 0)
+    let c = 10                       // tamanho do chanfro
+
+    // sombra
+    des.save()
+    des.shadowColor = 'rgba(0,0,0,0.6)'
+    des.shadowBlur = 10
+    des.shadowOffsetY = 4
+    caminhoChanfrado(b.x, y, b.w, b.h, c)
+    let g = des.createLinearGradient(0, y, 0, y + b.h)
+    g.addColorStop(0, hover ? '#33210f' : '#1e1409')
+    g.addColorStop(1, hover ? '#1d1207' : '#0f0904')
+    des.fillStyle = g
+    des.fill()
+    des.restore()
+
+    // contorno externo escuro
+    caminhoChanfrado(b.x, y, b.w, b.h, c)
+    des.strokeStyle = '#0b0704'
     des.lineWidth = 3
-    des.strokeRect(b.x, b.y, b.w, b.h)
-    let t = new Texto()
-    t.des_text(txt, b.x + b.w / 2, b.y + b.h / 2 + 9, '#ffd84d', 'bold 26px monospace', 'center')
+    des.stroke()
+
+    // filete dourado escavado por dentro
+    caminhoChanfrado(b.x + 5, y + 5, b.w - 10, b.h - 10, c - 4)
+    des.strokeStyle = hover ? '#ffe9a0' : '#a8802e'
+    des.lineWidth = hover ? 2 : 1
+    des.stroke()
+
+    // texto em pixel font, dourado com contorno (igual ao logotipo)
+    des.save()
+    if (hover) { des.shadowColor = '#ffd84d'; des.shadowBlur = 12 }
+    des.font = f + 'px "Press Start 2P", monospace'
+    des.textAlign = 'center'
+    des.textBaseline = 'middle'
+    des.lineWidth = 4
+    des.strokeStyle = '#2a1806'
+    des.strokeText(txt, b.x + b.w / 2, y + b.h / 2 + 1)
+    des.fillStyle = hover ? '#fff0a8' : '#ffd84d'
+    des.fillText(txt, b.x + b.w / 2, y + b.h / 2 + 1)
+    des.restore()
+    des.textAlign = 'left'
+    des.textBaseline = 'alphabetic'
+
+    // marcadores de seleção nas laterais quando o mouse está em cima
+    if (hover) {
+        des.fillStyle = '#ffd84d'
+        des.font = '12px "Press Start 2P", monospace'
+        des.textBaseline = 'middle'
+        des.fillText('▶', b.x - 20, y + b.h / 2)
+        des.fillText('◀', b.x + b.w + 8, y + b.h / 2)
+        des.textBaseline = 'alphabetic'
+    }
 }
 
 function desHome() {
     des.drawImage(pegaImg('assets/home.png'), 0, 0, LARG, ALT)
-    desBotao(btnJogar, 'JOGAR', '#3aa0ff')
-    desBotao(btnManual, 'MANUAL', '#c4943a')
+    // a Press Start 2P não tem glifos acentuados (o "Ó" cai no fallback e desalinha),
+    // por isso os rótulos dos botões são sem acento
+    desBotao(btnJogar, 'JOGAR', 18)
+    desBotao(btnManual, 'MANUAL', 12)
+    desBotao(btnSobre, 'EQUIPE', 12)
+
+    // dica de teclas, discreta, sobre a areia
+    des.save()
+    des.font = '8px "Press Start 2P", monospace'
+    des.textAlign = 'center'
+    des.lineWidth = 3
+    des.strokeStyle = 'rgba(0,0,0,0.75)'
+    des.strokeText('ENTER  JOGAR     M  MANUAL     N  EQUIPE', LARG / 2, ALT - 22)
+    des.fillStyle = '#e8c98a'
+    des.fillText('ENTER  JOGAR     M  MANUAL     N  EQUIPE', LARG / 2, ALT - 22)
+    des.textAlign = 'left'
+    des.restore()
 }
 
-// ---------- MANUAL (overlay HTML) ----------
+// ---------- MANUAL e SOBRE NÓS (overlays HTML) ----------
 let _manualEl = document.getElementById('manual')
+let _sobreEl = document.getElementById('sobre')
 
 function abreManual() {
     if (_manualEl) _manualEl.classList.remove('oculto')
 }
 function fechaManual() {
     if (_manualEl) _manualEl.classList.add('oculto')
+}
+function abreSobre() {
+    if (_sobreEl) { _sobreEl.classList.remove('oculto'); _sobreEl.scrollTop = 0 }
+}
+function fechaSobre() {
+    if (_sobreEl) _sobreEl.classList.add('oculto')
+}
+// true se algum overlay está por cima do canvas
+function overlayAberto() {
+    return (_manualEl && !_manualEl.classList.contains('oculto')) ||
+           (_sobreEl && !_sobreEl.classList.contains('oculto'))
 }
 
 // ícones do manual: animam (cicla os quadros do spritesheet, ou uma lista de imagens)
@@ -293,7 +414,10 @@ setInterval(() => {
 }, 450)
 
 let _fecharBtn = document.getElementById('fecharManual')
-if (_fecharBtn) _fecharBtn.addEventListener('click', fechaManual)
+if (_fecharBtn) _fecharBtn.addEventListener('click', () => { tocaSom(SONS.click); fechaManual() })
+
+let _fecharSobreBtn = document.getElementById('fecharSobre')
+if (_fecharSobreBtn) _fecharSobreBtn.addEventListener('click', () => { tocaSom(SONS.click); fechaSobre() })
 
 // ============================================================
 //  GAME OVER

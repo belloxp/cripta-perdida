@@ -29,43 +29,75 @@ const SONS = {
     item:   novoAudio('assets/audios/item.wav'),
     quebra: novoAudio('assets/audios/quebra.wav'),
     porta:  novoAudio('assets/audios/porta.wav'),
-    erro:   novoAudio('assets/audios/erro.wav')
+    erro:   novoAudio('assets/audios/erro.wav'),
+    click:  novoAudio('audios/click.wav')
 }
 // tiro é repetitivo → mais baixo pra não cansar
-const VOL_SONS = { tiro: 0.2, dano: 0.5, item: 0.5, quebra: 0.55, porta: 0.6, erro: 0.5 }
+const VOL_SONS = { tiro: 0.2, dano: 0.5, item: 0.5, quebra: 0.55, porta: 0.6, erro: 0.5, click: 0.6 }
 for (let k in SONS) { if (SONS[k]) SONS[k].volume = VOL_SONS[k] }
 
-// trilha de fundo + música do boss (loop). "Ducking": a trilha abaixa quando toca um efeito.
+// ---------- trilhas (loop) ----------
+// 3 faixas exclusivas: 'menu' (telas iniciais), 'jogo' (fases) e 'boss'.
+// Só uma toca por vez. "Ducking": a trilha abaixa quando toca um efeito.
 const MUS_VOL = 0.45
+let musicaMenu = novoAudio('audios/intro.mp3')
+if (musicaMenu) { musicaMenu.loop = true; musicaMenu.volume = MUS_VOL }
 let musica = novoAudio('audios/soundtrack.mp3')
 if (musica) { musica.loop = true; musica.volume = MUS_VOL }
 let musicaBoss = novoAudio('assets/audios/boss.wav')
 if (musicaBoss) { musicaBoss.loop = true; musicaBoss.volume = 0.5 }
-let musDuck = 0
-let musicaComecou = false
 
+let musDuck = 0
+let musicaComecou = false   // o navegador só libera áudio após a 1ª interação
+let faixa = 'menu'          // faixa desejada agora
+
+function faixaAtual() {
+    if (faixa === 'menu') return musicaMenu
+    if (faixa === 'boss') return musicaBoss
+    return musica
+}
+
+// pausa todas as outras e toca a faixa desejada (se o áudio já estiver liberado)
+function aplicaFaixa() {
+    if (!musicaComecou) return
+    let alvo = faixaAtual()
+    ;[musicaMenu, musica, musicaBoss].forEach((a) => {
+        if (a && a !== alvo && !a.paused) a.pause()
+    })
+    if (alvo && alvo.paused) alvo.play().catch(() => {})
+}
+
+function tocaFaixa(nome) {
+    if (faixa === nome) return
+    faixa = nome
+    aplicaFaixa()
+}
+
+// chamada no primeiro keydown — libera o áudio e engata a faixa atual
 function iniciaMusica() {
     musicaComecou = true
-    if (musica && musica.paused && (!musicaBoss || musicaBoss.paused)) musica.play().catch(() => {})
+    aplicaFaixa()
 }
+
 function iniciaMusicaBoss() {
-    if (musica) musica.pause()
-    if (musicaBoss) { musicaBoss.currentTime = 0; musicaBoss.play().catch(() => {}) }
+    if (musicaBoss) musicaBoss.currentTime = 0
+    tocaFaixa('boss')
 }
+// volta pra trilha das fases (só age se o boss estava tocando)
 function paraMusicaBoss() {
-    if (musicaBoss && !musicaBoss.paused) {
-        musicaBoss.pause()
-        if (musica && musicaComecou) musica.play().catch(() => {})
-    }
+    if (faixa === 'boss') tocaFaixa('jogo')
 }
+
 function duckMusica(frames) {
     if (frames > musDuck) musDuck = frames
 }
 function atualizaAudio() {
-    if (!musica) return
-    let alvo = musDuck > 0 ? MUS_VOL * 0.28 : MUS_VOL
+    let a = faixaAtual()
+    if (!a) return
+    let base = faixa === 'boss' ? 0.5 : MUS_VOL
+    let alvo = musDuck > 0 ? base * 0.28 : base
     if (musDuck > 0) musDuck -= 1
-    musica.volume += (alvo - musica.volume) * 0.15
+    a.volume += (alvo - a.volume) * 0.15
 }
 
 function tocaSom(a) {
