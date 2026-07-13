@@ -382,9 +382,9 @@ function desHome() {
     let logo = pegaImg('assets/icon.png')
     des.textAlign = 'left'
     if (logo.complete && logo.naturalWidth > 0) {
-        let lh = 150
+        let lh = 100
         let lw = lh * logo.naturalWidth / logo.naturalHeight
-        if (lw > 400) { lw = 400; lh = lw * logo.naturalHeight / logo.naturalWidth }
+        if (lw > 280) { lw = 280; lh = lw * logo.naturalHeight / logo.naturalWidth }
         des.drawImage(logo, 28, 36, lw, lh) // colado no canto, junto do menu
     } else if (temFundoNovo) {
         des.fillStyle = '#ffd84d'
