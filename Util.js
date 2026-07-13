@@ -28,12 +28,32 @@ class Coletavel extends Obj {
     }
 }
 
+// ============================================================
+//  PAREDE (grades de ferro dos labirintos) E PORTA
+// ============================================================
 class Parede extends Obj {
     constructor(x, y, w, h) {
         super(x, y, w, h, null)
     }
 
     des_obj() {
+        let img = pegaImg('assets/muro.png')
+        if (img.complete && img.naturalWidth > 0) {
+            if (!Parede._pat) {
+                let tile = document.createElement('canvas')
+                tile.width = 220; tile.height = 220
+                tile.getContext('2d').drawImage(img, 0, 0, 220, 220)
+                Parede._pat = des.createPattern(tile, 'repeat')
+            }
+            des.save()
+            des.beginPath()
+            des.rect(this.x, this.y, this.w, this.h)
+            des.clip()
+            des.fillStyle = Parede._pat
+            des.fillRect(this.x, this.y, this.w, this.h)
+            des.restore()
+            return
+        }
         des.fillStyle = '#2c2c33'
         des.fillRect(this.x, this.y, this.w, this.h)
         des.strokeStyle = '#55555f'
@@ -57,6 +77,131 @@ class Parede extends Obj {
 }
 
 let des = null 
+
+// ============================================================
+//  HARPA E NOTA MUSICAL (fase 1)
+// ============================================================
+class Harpa extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, 'assets/harpa_001.png')
+        this.tocando = 0
+        this.frame = 0
+        this.frameTimer = 0
+    }
+
+    atual() {
+        if (this.tocando > 0) {
+            this.tocando -= 1
+            this.frameTimer += 1
+            if (this.frameTimer >= 6) {
+                this.frameTimer = 0
+                this.frame = this.frame === 0 ? 1 : 0
+            }
+        } else {
+            this.frame = 0
+        }
+    }
+
+    des_obj() {
+        des.drawImage(pegaImg('assets/harpa_' + (this.frame === 0 ? '001' : '002') + '.png'), this.x, this.y, this.w, this.h)
+    }
+}
+
+class NotaMusical extends Obj {
+    constructor(x, y) {
+        super(x, y, 26, 26, 'assets/nota1.png')
+        this.alpha = 1
+        this.dx = (Math.random() - 0.5) * 1.4
+    }
+
+    mov() {
+        this.y -= 1.4
+        this.x += this.dx
+        this.alpha -= 0.012
+    }
+
+    des_obj() {
+        let img = pegaImg(this.at)
+        if (!img.complete || img.naturalWidth === 0) return
+        des.globalAlpha = Math.max(0, this.alpha)
+        des.drawImage(img, this.x, this.y, this.w, this.h)
+        des.globalAlpha = 1
+    }
+}
+
+// ============================================================
+//  VASO E COLETÁVEL (fase 4 + drops)
+// ============================================================
+class Vaso extends Obj {
+    constructor(x, y, w, h, at) {
+        super(x, y, w, h, at)
+        this.temColetavel = false
+        this.quebrado = false
+    }
+}
+
+// ============================================================
+//  FONTE DE INFECÇÃO E POÇA DE ÁCIDO (fase 4)
+// ============================================================
+class Fonte extends Obj {
+    constructor(x, y) {
+        super(x, y, 54, 54, 'assets/fonte.png')
+        this.hp = 6
+        this.t = Math.random() * 4
+    }
+
+    des_obj() {
+        this.t += 0.06
+        let f = Math.floor(this.t) % 4
+        if (!desSprite('assets/fonte_sheet.png', 4, f, this.x, this.y, this.w, this.h)) {
+            let img = pegaImg(this.at)
+            if (img.complete && img.naturalWidth > 0) des.drawImage(img, this.x, this.y, this.w, this.h)
+        }
+        // mini barra de vida da fonte
+        des.fillStyle = '#222'
+        des.fillRect(this.x, this.y - 10, this.w, 6)
+        des.fillStyle = '#9dff3a'
+        des.fillRect(this.x, this.y - 10, this.w * (this.hp / 6), 6)
+    }
+}
+
+class Poca extends Obj {
+    constructor(x, y, w, h) {
+        super(x, y, w, h, null)
+        this.t = Math.random() * 6
+    }
+
+    des_obj() {
+        this.t += 0.06
+        // sprite animado (4 quadros); desenha um pouco maior que a hitbox pra sobrar borda
+        let frame = Math.floor(this.t) % 4
+        if (desSprite('assets/poca_sheet.png', 4, frame, this.x - 8, this.y - 10, this.w + 16, this.h + 20)) return
+        // fallback: borrão procedural enquanto poca.png não existir
+        let alpha = 0.55 + Math.sin(this.t) * 0.15
+        des.fillStyle = 'rgba(150, 190, 40,' + alpha + ')'
+        des.beginPath()
+        des.ellipse(this.x + this.w / 2, this.y + this.h / 2, this.w / 2, this.h / 2, 0, 0, Math.PI * 2)
+        des.fill()
+        des.fillStyle = 'rgba(220, 240, 120, 0.35)'
+        des.beginPath()
+        des.ellipse(this.x + this.w / 2 - 6, this.y + this.h / 2 - 3, this.w / 5, this.h / 5, 0, 0, Math.PI * 2)
+        des.fill()
+    }
+}
+
+// ============================================================
+//  GRANIZO (fase 5)
+// ============================================================
+class Granizo extends Obj {
+    constructor(x, y, w, h, at, vel) {
+        super(x, y, w, h, at)
+        this.vel = vel
+    }
+
+    mov() {
+        this.y += this.vel
+    }
+}
 
 // ---------- cache de imagens ----------
 const _imgs = {}
