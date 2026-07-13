@@ -47,7 +47,10 @@ _cv.addEventListener('mousemove', (ev) => {
     let emCima = (estado === 'HOME' &&
         (dentroDe(mouseX, mouseY, btnJogar) || dentroDe(mouseX, mouseY, btnManual) || dentroDe(mouseX, mouseY, btnSobre))) ||
         (estado === 'MODOS' &&
-        (dentroDe(mouseX, mouseY, btnHistoria) || dentroDe(mouseX, mouseY, btnSobrev) || dentroDe(mouseX, mouseY, btnPvp)))
+        [0, 1, 2].some((i) => dentroDe(mouseX, mouseY, modoRect(i))))
+    if (estado === 'MODOS') {
+        [0, 1, 2].forEach((i) => { if (dentroDe(mouseX, mouseY, modoRect(i))) modoSel = i })
+    }
     _cv.style.cursor = emCima ? 'pointer' : 'default'
 })
 _cv.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1 })
@@ -62,9 +65,9 @@ _cv.addEventListener('click', (ev) => {
         else if (dentroDe(mx, my, btnManual)) { tocaSom(SONS.click); abreManual() }
         else if (dentroDe(mx, my, btnSobre)) { tocaSom(SONS.click); abreSobre() }
     } else if (estado === 'MODOS') {
-        if (dentroDe(mx, my, btnHistoria)) { tocaSom(SONS.click); avancaFluxo() }
-        else if (dentroDe(mx, my, btnSobrev)) { tocaSom(SONS.click); iniciaSobrevivencia() }
-        else if (dentroDe(mx, my, btnPvp)) { tocaSom(SONS.click); iniciaPvp() }
+        [0, 1, 2].forEach((i) => {
+            if (dentroDe(mx, my, modoRect(i))) { modoSel = i; confirmaModo() }
+        })
     }
 })
 
@@ -186,9 +189,10 @@ function aoApertar(k) {
         return
     }
     if (estado === 'MODOS') {
-        if (k === '1' || k === 'Enter') { tocaSom(SONS.click); avancaFluxo(); return }
-        if (k === '2') { tocaSom(SONS.click); iniciaSobrevivencia(); return }
-        if (k === '3') { tocaSom(SONS.click); iniciaPvp(); return }
+        if (k === 'ArrowUp' || k === 'w') { tocaSom(SONS.click); modoSel = (modoSel + 2) % 3 }
+        if (k === 'ArrowDown' || k === 's') { tocaSom(SONS.click); modoSel = (modoSel + 1) % 3 }
+        if (k === '1' || k === '2' || k === '3') { modoSel = Number(k) - 1; confirmaModo() }
+        if (k === 'Enter') confirmaModo()
         return
     }
     if (estado === 'SOBREVIVE') {
@@ -288,10 +292,17 @@ const btnJogar = { x: LARG / 2 - 118, y: 404, w: 236, h: 50 }
 const btnManual = { x: LARG / 2 - 118, y: 462, w: 236, h: 40 }
 const btnSobre = { x: LARG / 2 - 118, y: 510, w: 236, h: 40 }
 
-// ---------- botões da tela de modos ----------
-const btnHistoria = { x: LARG / 2 - 200, y: 196, w: 400, h: 86, t: 'MODO HISTORIA', s: 'As dez pragas — cooperativo' }
-const btnSobrev = { x: LARG / 2 - 200, y: 300, w: 400, h: 86, t: 'SOBREVIVENCIA', s: 'Ondas infinitas, cada vez mais difícil' }
-const btnPvp = { x: LARG / 2 - 200, y: 404, w: 400, h: 86, t: '1 VS 1', s: 'Duelo entre os dois jogadores' }
+// ---------- opções da tela de modos (lista, navegação por setas/mouse) ----------
+const MODOS_OPCOES = [
+    { t: 'MODO HISTORIA', s: 'As dez pragas — cooperativo' },
+    { t: 'SOBREVIVENCIA', s: 'Ondas infinitas, cada vez mais difícil' },
+    { t: '1 VS 1', s: 'Duelo entre os dois jogadores' }
+]
+let modoSel = 0
+// área clicável de cada opção
+function modoRect(i) {
+    return { x: LARG / 2 - 230, y: 218 + i * 92, w: 460, h: 64 }
+}
 
 function dentroDe(mx, my, b) {
     return mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h
@@ -390,59 +401,40 @@ function desHome() {
     des.restore()
 }
 
-// estela grande com título e subtítulo (tela de modos)
-function desBotaoModo(b) {
-    let hover = dentroDe(mouseX, mouseY, b)
-    let y = b.y + (hover ? 2 : 0)
-    des.save()
-    des.shadowColor = 'rgba(0,0,0,0.6)'
-    des.shadowBlur = 10
-    des.shadowOffsetY = 4
-    caminhoChanfrado(b.x, y, b.w, b.h, 12)
-    let g = des.createLinearGradient(0, y, 0, y + b.h)
-    g.addColorStop(0, hover ? '#33210f' : '#1e1409')
-    g.addColorStop(1, hover ? '#1d1207' : '#0f0904')
-    des.fillStyle = g
-    des.fill()
-    des.restore()
-    caminhoChanfrado(b.x, y, b.w, b.h, 12)
-    des.strokeStyle = hover ? '#ffd84d' : '#8a6a33'
-    des.lineWidth = 2
-    des.stroke()
-    des.textAlign = 'center'
-    des.textBaseline = 'middle'
-    des.fillStyle = hover ? '#ffd84d' : '#e8c98a'
-    des.font = '15px "Press Start 2P", monospace'
-    des.fillText(b.t, b.x + b.w / 2, y + 32)
-    des.fillStyle = hover ? '#d9c9a0' : '#9a8a68'
-    des.font = '17px VT323, monospace'
-    des.fillText(b.s, b.x + b.w / 2, y + 60)
-    des.textAlign = 'left'
-    des.textBaseline = 'alphabetic'
-}
-
 function desModos() {
     des.drawImage(pegaImg('assets/home.png'), 0, 0, LARG, ALT)
-    des.fillStyle = 'rgba(8, 5, 2, 0.72)'
+    des.fillStyle = 'rgba(8, 5, 2, 0.82)'
     des.fillRect(0, 0, LARG, ALT)
+
     des.textAlign = 'center'
-    des.fillStyle = '#ffd84d'
-    des.font = '22px "Press Start 2P", monospace'
-    des.fillText('ESCOLHA O MODO', LARG / 2, 130)
-    des.textAlign = 'left'
-    desBotaoModo(btnHistoria)
-    desBotaoModo(btnSobrev)
-    desBotaoModo(btnPvp)
-    des.save()
+    MODOS_OPCOES.forEach((o, i) => {
+        let r = modoRect(i)
+        let sel = modoSel === i
+        let y = r.y + 30
+        des.font = '16px "Press Start 2P", monospace'
+        des.fillStyle = sel ? '#ffd84d' : '#a89468'
+        des.fillText(o.t, LARG / 2, y)
+        if (sel) {
+            des.fillText('►', LARG / 2 - des.measureText(o.t).width / 2 - 34, y)
+            des.fillStyle = '#d9c9a0'
+            des.font = '19px VT323, monospace'
+            des.fillText(o.s, LARG / 2, y + 28)
+        }
+    })
+
     des.font = '8px "Press Start 2P", monospace'
-    des.textAlign = 'center'
     des.fillStyle = '#9a8a68'
-    des.fillText('1 / 2 / 3 ESCOLHEM     ESC VOLTA', LARG / 2, ALT - 26)
+    des.fillText('SETAS ESCOLHEM    ENTER CONFIRMA    ESC VOLTA', LARG / 2, ALT - 26)
     des.textAlign = 'left'
-    des.restore()
 }
 
 // ---------- entrada nos modos ----------
+function confirmaModo() {
+    tocaSom(SONS.click)
+    if (modoSel === 0) avancaFluxo()
+    else if (modoSel === 1) iniciaSobrevivencia()
+    else iniciaPvp()
+}
 function iniciaSobrevivencia() {
     faseAtualObj = sobrevivencia
     sobrevivencia.init()
