@@ -384,8 +384,8 @@ function desHome() {
     if (logo.complete && logo.naturalWidth > 0) {
         let lh = 175
         let lw = lh * logo.naturalWidth / logo.naturalHeight
-        if (lw > 470) { lw = 470; lh = lw * logo.naturalHeight / logo.naturalWidth }
-        des.drawImage(logo, MENU_X - 6, 44, lw, lh)
+        if (lw > 440) { lw = 440; lh = lw * logo.naturalHeight / logo.naturalWidth }
+        des.drawImage(logo, 232 - lw / 2, 44, lw, lh) // centrado na coluna do menu
     } else if (temFundoNovo) {
         des.fillStyle = '#ffd84d'
         des.font = '26px "Press Start 2P", monospace'
@@ -404,20 +404,16 @@ function desHome() {
         let x = MENU_X + (it.sub ? 26 : 0) + (sel ? 10 : 0)
         des.save()
         if (it.alpha !== undefined) des.globalAlpha = it.alpha
-        des.letterSpacing = '3px'
-        des.font = (sel ? '700 ' : '500 ') + (it.sub ? (sel ? '21px' : '19px') : (sel ? '24px' : '21px')) + ' Cinzel, serif'
+        des.font = (it.sub ? (sel ? '13px' : '11px') : (sel ? '15px' : '13px')) + ' "Press Start 2P", monospace'
         des.fillStyle = sel ? '#ffd84d' : (it.sub ? '#9c8c66' : '#b7a67e')
         let rotulo = it.tipo === 'jogar' ? (menuAberto ? 'JOGAR —' : 'JOGAR') : it.t
         des.fillText(rotulo, x, it.y)
         des.restore()
     })
 
-    des.save()
-    des.letterSpacing = '2px'
-    des.font = '500 13px Cinzel, serif'
+    des.font = '8px "Press Start 2P", monospace'
     des.fillStyle = '#8a7a58'
-    des.fillText('SETAS ESCOLHEM      ENTER CONFIRMA', MENU_X, ALT - 28)
-    des.restore()
+    des.fillText('SETAS ESCOLHEM    ENTER CONFIRMA', MENU_X, ALT - 28)
 
     // modal de confirmação
     if (menuConfirma >= 0) {
@@ -430,15 +426,12 @@ function desHome() {
         des.lineWidth = 2
         des.strokeRect(bx, by, bw, bh)
         des.textAlign = 'center'
-        des.save()
-        des.letterSpacing = '3px'
         des.fillStyle = '#d9c9a0'
-        des.font = '500 15px Cinzel, serif'
+        des.font = '10px "Press Start 2P", monospace'
         des.fillText('INICIAR', LARG / 2, by + 42)
         des.fillStyle = '#ffd84d'
-        des.font = '700 26px Cinzel, serif'
+        des.font = '17px "Press Start 2P", monospace'
         des.fillText(MENU_MODOS[menuConfirma].t, LARG / 2, by + 80)
-        des.restore()
         ;['SIM', 'NAO'].forEach((txt, n) => {
             let r = confirmaRect(n)
             let sel = confirmaSel === n
@@ -447,8 +440,8 @@ function desHome() {
             des.strokeStyle = sel ? '#ffd84d' : '#5a4322'
             des.strokeRect(r.x, r.y, r.w, r.h)
             des.fillStyle = sel ? '#ffd84d' : '#9c8c66'
-            des.font = '700 18px Cinzel, serif'
-            des.fillText(txt, r.x + r.w / 2, r.y + 29)
+            des.font = '13px "Press Start 2P", monospace'
+            des.fillText(txt, r.x + r.w / 2, r.y + 28)
         })
         des.textAlign = 'left'
     }
