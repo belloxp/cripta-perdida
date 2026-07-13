@@ -402,6 +402,11 @@ function desHome() {
     if (lw > 180) { lw = 180; lh = lw * logo.naturalHeight / logo.naturalWidth }
     des.drawImage(logo, 42, 72, lw, lh)
 
+    // easing da abertura do JOGAR
+    let alvoAnim = menuAberto ? 1 : 0
+    menuAnim += (alvoAnim - menuAnim) * 0.22
+    if (Math.abs(alvoAnim - menuAnim) < 0.01) menuAnim = alvoAnim
+
     let itens = menuItens()
     itens.forEach((it, i) => {
         let sel = menuSel === i && menuConfirma < 0
