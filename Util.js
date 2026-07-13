@@ -1,30 +1,30 @@
-// ============================================================
-//  A CRIPTA PERDIDA — Util.js
-//  Classes base e helpers (mesma arquitetura do jogo base:
-//  Obj com des_obj() e colid() AABB, subclasses com mov())
-// ============================================================
 class Coletavel extends Obj {
+    // tipo: 'vida' | 'forca' | 'amuleto' (objetivo da fase 4)
     constructor(x, y, tipo, cai) {
-        super(x, y, 30, 30, 'assets/coletavel.png')
-        this.tipo = tipo          // 'vida' | 'forca' | 'amuleto'
+        let img = tipo === 'vida' ? 'assets/vida.png'
+            : (tipo === 'forca' ? 'assets/forca.png' : 'assets/coletavel.png')
+        super(x, y, 64, 64, img)
+        this.tipo = tipo
         this.cai = !!cai
         this.t = Math.random() * 6
     }
 
     mov() {
         this.t += 0.08
-        if (this.cai) this.y += 2.2
+        if (this.cai) this.x -= 3   // vem pra esquerda, na direção do player
     }
 
     des_obj() {
         let flutua = Math.sin(this.t) * 3
+        if (this.tipo === 'goldencarlos') {
+            des.save()
+            des.shadowColor = '#ffd84d'
+            des.shadowBlur = 18
+            des.drawImage(pegaImg(this.at), this.x, this.y + flutua, this.w, this.h)
+            des.restore()
+            return
+        }
         des.drawImage(pegaImg(this.at), this.x, this.y + flutua, this.w, this.h)
-        des.fillStyle = '#000'
-        des.font = 'bold 13px monospace'
-        des.textAlign = 'center'
-        let letra = this.tipo === 'vida' ? 'V' : (this.tipo === 'forca' ? 'F' : 'A')
-        des.fillText(letra, this.x + this.w / 2, this.y + this.h / 2 + 5 + flutua)
-        des.textAlign = 'left'
     }
 }
 
@@ -76,7 +76,13 @@ class Parede extends Obj {
     }
 }
 
-let des = null 
+// ============================================================
+//  A CRIPTA PERDIDA — Util.js
+//  Classes base e helpers (mesma arquitetura do jogo base:
+//  Obj com des_obj() e colid() AABB, subclasses com mov())
+// ============================================================
+
+let des = null // contexto 2D — atribuído em cripta.js
 
 // ============================================================
 //  HARPA E NOTA MUSICAL (fase 1)
@@ -272,6 +278,11 @@ class Porta extends Obj {
 
     des_obj() {
         this.t += 0.08
+        let img = pegaImg('assets/porta.png')
+        if (img.complete && img.naturalWidth > 0) {
+            des.drawImage(img, this.x, this.y, this.w, this.h)
+            return
+        }
         des.fillStyle = '#6e5524'
         des.fillRect(this.x, this.y, this.w, this.h)
         des.fillStyle = '#ffd84d'
@@ -282,28 +293,32 @@ class Porta extends Obj {
 }
 
 // ============================================================
-//  PLAYER
+//  JOGADORES
+//  Sprites: prefixo + acao + '_00N.png'
+//  ex: 'assets/player1' + 'esq' + '_001.png'
+//      'assets/player1' + 'tirodir' + '_002.png'
 // ============================================================
 class Player extends Obj {
     constructor(x, y, w, h, prefixo, rosto, mapaTeclas) {
         super(x, y, w, h, null)
-        this.prefixo = prefixo
-        this.rosto = rosto
-        this.teclas = mapaTeclas
+        this.prefixo = prefixo        // 'assets/player1'
+        this.rosto = rosto            // 'assets/selecaoPlayer1.png'
+        this.teclas = mapaTeclas      // {esq, dir, cima, baixo, tiro}
+        this.maxVida = 10
+        this.vida = 10
+        this.forca = 1                // dano do tiro (coletável aumenta, máx 3)
+        this.pts = 0
         this.facing = 'dir'
         this.frame = 0
         this.frameTimer = 0
+        this.tiroTimer = 0            // tempo exibindo sprite de tiro
+        this.cooldown = 0             // intervalo entre tiros
+        this.invul = 0                // frames de invulnerabilidade após dano
+        this.vivo = true
         this.dirX = 0
         this.dirY = 0
         this.vel = 4
-        this.forca = 1
-        this.tiroTimer = 0
-        this.cooldown = 0
-        this.maxVida = 10
-        this.vida = 10
-        this.pts = 0
-        this.invul = 0
-        this.vivo = true
+        this.lento = 0
     }
 
     spriteAtual() {
@@ -315,31 +330,36 @@ class Player extends Obj {
 
     des_obj() {
         if (!this.vivo) return
-        if (this.invul > 0 && Math.floor(this.invul / 4) % 2 === 0) return
+        if (this.invul > 0 && Math.floor(this.invul / 4) % 2 === 0) return // pisca
         des.drawImage(pegaImg(this.spriteAtual()), this.x, this.y, this.w, this.h)
     }
 
+    // area = {x, y, w, h, vert}  |  paredes = [Parede] (opcional)
     mov(area, paredes) {
         if (!this.vivo) return
+        let v = this.lento > 0 ? this.vel * 0.45 : this.vel
         this.dirX = 0
         this.dirY = 0
-        if (teclas[this.teclas.esq]) { this.dirX = -this.vel; this.facing = 'esq' }
-        if (teclas[this.teclas.dir]) { this.dirX = this.vel; this.facing = 'dir' }
+        if (teclas[this.teclas.esq]) { this.dirX = -v; this.facing = 'esq' }
+        if (teclas[this.teclas.dir]) { this.dirX = v; this.facing = 'dir' }
         if (area.vert) {
-            if (teclas[this.teclas.cima]) this.dirY = -this.vel
-            if (teclas[this.teclas.baixo]) this.dirY = this.vel
+            if (teclas[this.teclas.cima]) this.dirY = -v
+            if (teclas[this.teclas.baixo]) this.dirY = v
         }
 
+        // eixo X
         this.x += this.dirX
         if (paredes && this.bateParede(paredes)) this.x -= this.dirX
         if (this.x < area.x) this.x = area.x
         if (this.x + this.w > area.x + area.w) this.x = area.x + area.w - this.w
 
+        // eixo Y
         this.y += this.dirY
         if (paredes && this.bateParede(paredes)) this.y -= this.dirY
         if (this.y < area.y) this.y = area.y
         if (this.y + this.h > area.y + area.h) this.y = area.y + area.h - this.h
 
+        // animação de andar
         if (this.dirX !== 0 || this.dirY !== 0) {
             this.frameTimer += 1
             if (this.frameTimer >= 10) {
@@ -363,6 +383,7 @@ class Player extends Obj {
         if (this.cooldown > 0) this.cooldown -= 1
         if (this.tiroTimer > 0) this.tiroTimer -= 1
         if (this.invul > 0) this.invul -= 1
+        if (this.lento > 0) this.lento -= 1
     }
 
     levaDano(n) {
@@ -381,6 +402,7 @@ class Player extends Obj {
         this.vida = Math.min(this.maxVida, this.vida + n)
     }
 
+    // modo: 'cima' (fases de chuva de inimigos / boss) ou 'lado' (labirinto)
     atira(grupo, modo) {
         if (!this.vivo || this.cooldown > 0) return
         this.cooldown = 18
@@ -438,7 +460,7 @@ class Inimigo extends Obj {
 
 
 // ============================================================
-//  TIRO DOS JOGADORES
+//  TIRO DOS JOGADORES (retângulo, igual ao jogo base)
 // ============================================================
 class Tiro extends Obj {
     constructor(x, y, w, h, cor, dx, dy, dano, dono) {
@@ -451,6 +473,18 @@ class Tiro extends Obj {
     }
 
     des_tiro() {
+        let img = pegaImg('assets/tiro.png')
+        if (img.complete && img.naturalWidth > 0) {
+            // a imagem aponta pra CIMA; gira na direção do disparo
+            let cx = this.x + this.w / 2, cy = this.y + this.h / 2
+            let esp = 10, comp = 26
+            des.save()
+            des.translate(cx, cy)
+            des.rotate(Math.atan2(this.dy, this.dx) + Math.PI / 2)
+            des.drawImage(img, -esp / 2, -comp / 2, esp, comp)
+            des.restore()
+            return
+        }
         des.fillStyle = this.cor
         des.fillRect(this.x, this.y, this.w, this.h)
     }
@@ -479,6 +513,7 @@ class Texto {
 }
 
 class BarraProgresso {
+    // frac entre 0 e 1
     des(x, y, w, h, frac, corFundo, corFrente, rotulo) {
         des.fillStyle = corFundo
         des.fillRect(x, y, w, h)
@@ -496,7 +531,7 @@ class BarraProgresso {
     }
 }
 
-// ---------- efeitos de texto flutuante ----------
+// ---------- efeitos de texto flutuante (feedback de pickup etc) ----------
 let efeitos = []
 function efeitoTexto(txt, x, y, cor) {
     efeitos.push({ txt: txt, x: x, y: y, t: 60, cor: cor || '#ffe9b0' })

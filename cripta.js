@@ -3,20 +3,33 @@
 //  Máquina de estados: HOME → cut-scene → fase → ... → FINAL
 // ============================================================
 
-des = document.getElementById('des').getContext('2d')
 const LARG = 900
 const ALT = 600
-const TOPO = 60
+const TOPO = 60 // altura do HUD
 
+// renderiza numa resolução interna maior pra não borrar quando o CSS estica pro fullscreen.
+// as coordenadas do jogo continuam 0..LARG / 0..ALT — a escala é aplicada uma vez aqui.
+const ESCALA = (window.devicePixelRatio && window.devicePixelRatio >= 2) ? 3 : 2
+let _cv = document.getElementById('des')
+_cv.width = LARG * ESCALA
+_cv.height = ALT * ESCALA
+des = _cv.getContext('2d')
+des.scale(ESCALA, ESCALA)
+
+// ---------- jogadores ----------
+// P1: A/D/W/S move + F atira  |  P2: setas + L atira
 let p1 = new Player(280, 470, 46, 64, 'assets/player1', 'assets/selecaoPlayer1.png',
-    { esq: 'a', dir: 'd', cima: 'w', baixo: 's', tiro: 'f' })
+    { esq: 'a', dir: 'd', cima: 'w', baixo: 's', tiro: 'f' }, '#3aa0ff')
 let p2 = new Player(580, 470, 46, 64, 'assets/player2', 'assets/selecaoPlayer2.png',
-    { esq: 'ArrowLeft', dir: 'ArrowRight', cima: 'ArrowUp', baixo: 'ArrowDown', tiro: 'l' })
+    { esq: 'ArrowLeft', dir: 'ArrowRight', cima: 'ArrowUp', baixo: 'ArrowDown', tiro: 'l' }, '#37d67a')
+let players = [p1, p2]
 
+// ---------- entrada ----------
 const teclas = {}
 document.addEventListener('keydown', (ev) => {
     let k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key
     teclas[k] = true
+    iniciaMusica() // navegador só deixa tocar áudio após uma interação
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(ev.key)) ev.preventDefault()
     if (!ev.repeat) aoApertar(k)
 })
@@ -24,17 +37,159 @@ document.addEventListener('keyup', (ev) => {
     let k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key
     teclas[k] = false
 })
+_cv.addEventListener('click', (ev) => {
+    let r = _cv.getBoundingClientRect()
+    let mx = (ev.clientX - r.left) / r.width * LARG
+    let my = (ev.clientY - r.top) / r.height * ALT
+    if (estado === 'HOME') {
+        if (dentroDe(mx, my, btnJogar)) avancaFluxo()
+        else if (dentroDe(mx, my, btnManual)) abreManual()
+    }
+})
 
-function aoApertar(k) {
-    if (estado === 'HOME' && k === 'Enter') {
-        // TODO: iniciar o fluxo do jogo (cut-scene de intro)
+// ---------- fluxo do jogo ----------
+const FLUXO = [
+    { tipo: 'dica' },
+    { tipo: 'cut', id: 'intro' },
+    { tipo: 'fase', n: 1 },
+    { tipo: 'cut', id: 'pre2' },
+    { tipo: 'fase', n: 2 },
+    { tipo: 'cut', id: 'pre3' },
+    { tipo: 'fase', n: 3 },
+    { tipo: 'cut', id: 'pre5' },
+    { tipo: 'fase', n: 5 },
+    { tipo: 'cut', id: 'pre6' },
+    { tipo: 'fase', n: 6 },
+    { tipo: 'cut', id: 'pre7' },
+    { tipo: 'fase', n: 7 },
+    { tipo: 'cut', id: 'pre8' },
+    { tipo: 'fase', n: 8 },
+    { tipo: 'cut', id: 'final' },
+    { tipo: 'final' }
+]
+
+let estado = 'HOME' // HOME | CUTSCENE | FASE | GAMEOVER | FINAL
+let fluxoIdx = -1
+let cena = null
+let faseAtualObj = null
+let faseN = 0
+let piscaTimer = 0
+
+function avancaFluxo() {
+    paraMusicaBoss()
+    fluxoIdx += 1
+    if (fluxoIdx >= FLUXO.length) { voltaPraHome(); return }
+    let item = FLUXO[fluxoIdx]
+    if (item.tipo === 'cut') {
+        cena = new CenaDialogo(ROTEIRO[item.id])
+        estado = 'CUTSCENE'
+    } else if (item.tipo === 'fase') {
+        preparaFase(item.n)
+    } else if (item.tipo === 'dica') {
+        telaDica.prog = 0
+        estado = 'CARREGANDO'
+    } else if (item.tipo === 'final') {
+        cenaFinal.init()
+        estado = 'FINAL'
     }
 }
 
-let estado = 'HOME' // HOME | CUTSCENE | FASE | GAMEOVER | FINAL
-let piscaTimer = 0
-let faseAtualObj = null
+function preparaFase(n) {
+    faseN = n
+    faseAtualObj = FASES[n]
+    // quem morreu revive com metade da vida; quem sobreviveu ganha +1
+    players.forEach((pl) => {
+        if (!pl.vivo) {
+            pl.vivo = true
+            pl.vida = Math.ceil(pl.maxVida / 2)
+        } else {
+            pl.cura(1)
+        }
+        pl.invul = 0
+        pl.tiroTimer = 0
+        pl.cooldown = 0
+    })
+    faseAtualObj.init()
+    estado = 'FASE'
+}
 
+function reiniciaFase() {
+    paraMusicaBoss()
+    players.forEach((pl) => {
+        pl.vivo = true
+        pl.vida = pl.maxVida
+        pl.invul = 0
+    })
+    efeitos = []
+    faseAtualObj.init()
+    estado = 'FASE'
+}
+
+function voltaPraHome() {
+    paraMusicaBoss()
+    estado = 'HOME'
+    fluxoIdx = -1
+    efeitos = []
+    goldenCarlos = 0
+    bonusGolden = false
+    goldenSoltos = 0
+    players.forEach((pl) => {
+        pl.vivo = true
+        pl.maxVida = 10
+        pl.vida = pl.maxVida
+        pl.forca = 1
+        pl.pts = 0
+    })
+}
+
+// ---------- roteamento de teclas apertadas (não contínuas) ----------
+function aoApertar(k) {
+    if (k === 'Escape') { fechaManual(); return }
+    if (estado === 'HOME' && k === 'Enter') {
+        avancaFluxo()
+        return
+    }
+    if (estado === 'HOME' && k === 'm') {
+        abreManual()
+        return
+    }
+    if (estado === 'CARREGANDO' && k === 'Enter' && telaDica.prog >= 100) {
+        avancaFluxo()
+        return
+    }
+    if (estado === 'CUTSCENE' && k === 'Enter') {
+        cena.avancar()
+        return
+    }
+    if (estado === 'GAMEOVER' && k === 'Enter') {
+        reiniciaFase()
+        return
+    }
+    if (estado === 'FINAL' && k === 'Enter' && cenaFinal.t > 300) {
+        voltaPraHome()
+        return
+    }
+    if (estado === 'FASE') {
+        // fase 1: notas da harpa
+        if (faseN === 1) {
+            if (TECLAS_NOTAS_P1[k] !== undefined) fase1.nota(0, TECLAS_NOTAS_P1[k])
+            if (TECLAS_NOTAS_P2[k] !== undefined) fase1.nota(1, TECLAS_NOTAS_P2[k])
+        }
+        // fase 3: ingredientes da fórmula (P1: 1/2/3 — P2: 8/9/0)
+        if (faseN === 3) {
+            if (k === '1') fase3.ingrediente(0)
+            if (k === '2') fase3.ingrediente(1)
+            if (k === '3') fase3.ingrediente(2)
+            if (k === '8') fase3.ingrediente(0)
+            if (k === '9') fase3.ingrediente(1)
+            if (k === '0') fase3.ingrediente(2)
+        }
+    }
+}
+
+// ============================================================
+//  HUD — barras de vida com rosto, força e pontos
+// ============================================================
 let txtHud = new Texto()
 let barraHud = new BarraProgresso()
 
@@ -48,6 +203,7 @@ function desHUD() {
     desPainelPlayer(p1, 8, NOMES.p1, '#3aa0ff', false)
     desPainelPlayer(p2, LARG - 258, NOMES.p2, '#37d67a', true)
 
+    // nome da fase no centro
     if (faseAtualObj) {
         txtHud.des_text(faseAtualObj.nome, LARG / 2, 26, '#ffd84d', 'bold 15px monospace', 'center')
         txtHud.des_text('Pontos: ' + (p1.pts + p2.pts), LARG / 2, 46, '#c4943a', '13px monospace', 'center')
@@ -62,27 +218,92 @@ function desPainelPlayer(pl, x, nome, cor, invertido) {
     des.strokeStyle = cor
     des.strokeRect(rostoX, 8, 44, 44)
 
-    txtHud.des_text(nome + (pl.vivo ? '' : ' ☠'), infoX, 20, cor, 'bold 13px monospace')
+    txtHud.des_text(nome + (pl.vivo ? '' : ' \u2620'), infoX, 20, cor, 'bold 13px monospace')
     barraHud.des(infoX, 26, 148, 14, pl.vida / pl.maxVida, '#2a1414', pl.vida > 3 ? '#d63a3a' : '#ff7a3a', null)
-    txtHud.des_text('♥ ' + pl.vida + '/' + pl.maxVida + '   ⚔ x' + pl.forca, infoX, 54, '#f3e9d2', '12px monospace')
+    txtHud.des_text('\u2665 ' + pl.vida + '/' + pl.maxVida + '   \u2694 x' + pl.forca, infoX, 54, '#f3e9d2', '12px monospace')
+}
+
+// ============================================================
+//  TELA INICIAL
+// ============================================================
+// ---------- botões da tela inicial ----------
+const btnJogar = { x: LARG / 2 - 130, y: 395, w: 260, h: 62 }
+const btnManual = { x: LARG / 2 - 130, y: 472, w: 260, h: 50 }
+
+function dentroDe(mx, my, b) {
+    return mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h
+}
+
+function desBotao(b, txt, cor) {
+    des.fillStyle = 'rgba(20, 14, 8, 0.88)'
+    des.fillRect(b.x, b.y, b.w, b.h)
+    des.strokeStyle = cor
+    des.lineWidth = 3
+    des.strokeRect(b.x, b.y, b.w, b.h)
+    let t = new Texto()
+    t.des_text(txt, b.x + b.w / 2, b.y + b.h / 2 + 9, '#ffd84d', 'bold 26px monospace', 'center')
 }
 
 function desHome() {
     des.drawImage(pegaImg('assets/home.png'), 0, 0, LARG, ALT)
-
-    piscaTimer += 1
-    if (Math.floor(piscaTimer / 35) % 2 === 0) {
-        let t = new Texto()
-        t.des_text('PRESSIONE ENTER', LARG / 2, ALT - 60, '#ffd84d', 'bold 24px monospace', 'center')
-    }
+    desBotao(btnJogar, 'JOGAR', '#3aa0ff')
+    desBotao(btnManual, 'MANUAL', '#c4943a')
 }
 
+// ---------- MANUAL (overlay HTML) ----------
+let _manualEl = document.getElementById('manual')
+
+function abreManual() {
+    if (_manualEl) _manualEl.classList.remove('oculto')
+}
+function fechaManual() {
+    if (_manualEl) _manualEl.classList.add('oculto')
+}
+
+// ícones do manual: animam (cicla os quadros do spritesheet, ou uma lista de imagens)
+let _iconesManual = []
+document.querySelectorAll('#manual .ico').forEach((el) => {
+    let lista = el.getAttribute('data-imgs')
+    let frames = parseInt(el.getAttribute('data-frames') || '1', 10)
+    let arq = el.getAttribute('data-img')
+    if (lista) {
+        let arr = lista.split(',')
+        el.style.backgroundImage = "url('assets/" + arr[0] + "')"
+        _iconesManual.push({ el: el, imgs: arr, i: 0 })
+    } else if (frames > 1) {
+        el.style.backgroundImage = "url('assets/" + arq + "')"
+        el.style.backgroundSize = (frames * 100) + '% 100%'
+        el.style.backgroundPosition = '0% center'
+        _iconesManual.push({ el: el, frames: frames, i: 0 })
+    } else {
+        el.style.backgroundImage = "url('assets/" + arq + "')"
+    }
+})
+setInterval(() => {
+    if (!_manualEl || _manualEl.classList.contains('oculto')) return
+    _iconesManual.forEach((ic) => {
+        if (ic.imgs) {
+            ic.i = (ic.i + 1) % ic.imgs.length
+            ic.el.style.backgroundImage = "url('assets/" + ic.imgs[ic.i] + "')"
+        } else {
+            ic.i = (ic.i + 1) % ic.frames
+            ic.el.style.backgroundPosition = (ic.i / (ic.frames - 1) * 100) + '% center'
+        }
+    })
+}, 450)
+
+let _fecharBtn = document.getElementById('fecharManual')
+if (_fecharBtn) _fecharBtn.addEventListener('click', fechaManual)
+
+// ============================================================
+//  GAME OVER
+// ============================================================
 function desGameOver() {
     des.fillStyle = 'rgba(20, 0, 0, 0.78)'
     des.fillRect(0, 0, LARG, ALT)
     let t = new Texto()
     t.des_text('A CRIPTA OS CONSUMIU...', LARG / 2, ALT / 2 - 30, '#d63a3a', 'bold 42px serif', 'center')
-    t.des_text('As pragas avançam sobre o mundo.', LARG / 2, ALT / 2 + 10, '#f3e9d2', '17px monospace', 'center')
+    t.des_text('As pragas avan\u00E7am sobre o mundo.', LARG / 2, ALT / 2 + 10, '#f3e9d2', '17px monospace', 'center')
     piscaTimer += 1
     if (Math.floor(piscaTimer / 35) % 2 === 0) {
         t.des_text('ENTER para tentar a fase novamente', LARG / 2, ALT / 2 + 70, '#ffd84d', 'bold 18px monospace', 'center')
@@ -191,19 +412,6 @@ let cenaFinal = {
     }
 }
 
-function main() {
-    des.clearRect(0, 0, LARG, ALT)
-
-    if (estado === 'HOME') {
-        desHome()
-    }
-
-    requestAnimationFrame(main)
-}
-
-main()
-
-
 // ============================================================
 //  LOOP PRINCIPAL
 // ============================================================
@@ -265,3 +473,54 @@ let telaDica = {
         }
     }
 }
+
+function main() {
+    des.clearRect(0, 0, LARG, ALT)
+    atualizaAudio()
+
+    if (estado === 'HOME') {
+        desHome()
+    }
+    else if (estado === 'CARREGANDO') {
+        telaDica.prog = Math.min(100, telaDica.prog + 0.7)
+        telaDica.des()
+    }
+    else if (estado === 'CUTSCENE') {
+        // desenha a fase atrás da cut-scene (se houver) pra dar contexto
+        if (faseAtualObj) {
+            faseAtualObj.des()
+            desHUD()
+        } else {
+            desFundo(1)
+        }
+        cena.atual()
+        cena.des()
+        if (cena.terminou) avancaFluxo()
+    }
+    else if (estado === 'FASE') {
+        faseAtualObj.atual()
+        atualizaEfeitos()
+        faseAtualObj.des()
+        desEfeitos()
+        desHUD()
+
+        if (faseAtualObj.completa) {
+            avancaFluxo()
+        } else if (players.every((pl) => !pl.vivo)) {
+            estado = 'GAMEOVER'
+        }
+    }
+    else if (estado === 'GAMEOVER') {
+        faseAtualObj.des()
+        desHUD()
+        desGameOver()
+    }
+    else if (estado === 'FINAL') {
+        cenaFinal.atual()
+        cenaFinal.des()
+    }
+
+    requestAnimationFrame(main)
+}
+
+main()
