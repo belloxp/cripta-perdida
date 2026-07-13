@@ -98,7 +98,10 @@ let piscaTimer = 0
 
 function avancaFluxo() {
     paraMusicaBoss()
-    if (estado === 'HOME' || estado === 'MODOS') tocaFaixa('jogo') // saiu do menu: intro → trilha das fases
+    if (estado === 'HOME' || estado === 'MODOS') {
+        tocaFaixa('jogo') // saiu do menu: intro → trilha das fases
+        faseAtualObj = null // senão a cutscene inicial desenha a última fase jogada no fundo
+    }
     fluxoIdx += 1
     if (fluxoIdx >= FLUXO.length) { voltaPraHome(); return }
     let item = FLUXO[fluxoIdx]
@@ -151,6 +154,7 @@ function voltaPraHome() {
     tocaFaixa('menu') // de volta ao menu: toca a intro
     estado = 'HOME'
     fluxoIdx = -1
+    faseAtualObj = null
     efeitos = []
     goldenCarlos = 0
     bonusGolden = false
@@ -171,7 +175,7 @@ function aoApertar(k) {
         fechaManual()
         fechaSobre()
         if (estado === 'MODOS') { tocaSom(SONS.click); estado = 'HOME' }
-        else if (estado === 'SOBREVIVE' || estado === 'PVP') { tocaSom(SONS.click); tocaFaixa('menu'); estado = 'MODOS' }
+        else if (estado === 'SOBREVIVE' || estado === 'PVP') { tocaSom(SONS.click); tocaFaixa('menu'); faseAtualObj = null; estado = 'MODOS' }
         return
     }
     // com um overlay aberto, o jogo não recebe teclas
@@ -188,7 +192,7 @@ function aoApertar(k) {
         return
     }
     if (estado === 'SOBREVIVE') {
-        if (sobrevivencia.fim && k === 'Enter') { tocaFaixa('menu'); estado = 'MODOS' }
+        if (sobrevivencia.fim && k === 'Enter') { tocaFaixa('menu'); faseAtualObj = null; estado = 'MODOS' }
         return
     }
     if (estado === 'PVP') {
