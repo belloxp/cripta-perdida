@@ -736,7 +736,7 @@ let fase7 = {
         p1.x = 30; p1.y = 95; p1.facing = 'dir'
         p2.x = 84; p2.y = 95; p2.facing = 'dir'
         // pernas exaustas depois das hordas: um pouco mais lentos nas trevas
-        players.forEach((pl) => { pl.vel = 3.1 })
+        players.forEach((pl) => { pl.vel = 2.7 })
     },
     atual() {
         let area = { x: 12, y: 72, w: LARG - 24, h: ALT - 84, vert: true }
