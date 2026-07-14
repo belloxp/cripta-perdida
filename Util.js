@@ -173,6 +173,11 @@ class Player extends Obj {
         this.dirY = 0
         this.vel = 4
         this.lento = 0
+        // aquece o cache de imagens: sem isso o primeiro tiro pisca invisível
+        ;['dir', 'esq', 'tirodir', 'tiroesq'].forEach((acao) => {
+            pegaImg(prefixo + acao + '_001.png')
+            pegaImg(prefixo + acao + '_002.png')
+        })
     }
 
     spriteAtual() {
