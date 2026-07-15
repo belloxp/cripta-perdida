@@ -18,6 +18,9 @@ function pegaImg(src) {
     return _imgs[src]
 }
 
+;['assets/menuFundo.png', 'assets/icon.png'].forEach(pegaImg)
+
+
 // ---------- sistema de som ----------
 function novoAudio(src) {
     try { return new Audio(src) } catch (e) { return null }
